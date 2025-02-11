@@ -1,0 +1,86 @@
+.editor-container {
+  width: 80%;
+  margin: 20px auto;
+  font-family: Arial, sans-serif;
+}
+
+.toolbar {
+  background: #f0f0f0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  margin-bottom: 5px;
+}
+
+.toolbar button {
+  margin-right: 5px;
+  padding: 5px 10px;
+  border: none;
+  background: #e0e0e0;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.toolbar button:hover {
+  background: #d0d0d0;
+}
+
+.editor {
+  min-height: 300px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  background: #fff;
+}
+
+.editor img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ddd;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+}
+
+/* Floating Image Toolbar */
+.image-toolbar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 10px;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+.image-toolbar label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.image-toolbar input,
+.image-toolbar select {
+  width: 150px;
+  margin-left: 10px;
+  padding: 3px;
+}
+
+.image-toolbar button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  border: none;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+
+.image-toolbar button:hover {
+  background: #45a049;
+}
+
+pre {
+  background: #f9f9f9;
+  padding: 10px;
+  border: 1px solid #ccc;
+  overflow-x: auto;
+}

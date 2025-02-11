@@ -1,0 +1,62 @@
+<div class="toolbar">
+  <button (click)="format('bold')"><b>B</b></button>
+  <button (click)="format('italic')"><i>I</i></button>
+  <button (click)="format('underline')"><u>U</u></button>
+  <button (click)="format('insertUnorderedList')">• List</button>
+  <button (click)="format('formatBlock', 'h1')">H1</button>
+  <button (click)="format('formatBlock', 'h2')">H2</button>
+  <button (click)="format('formatBlock', 'p')">P</button>
+  <button (click)="clearFormatting()">Clear</button>
+  <button (click)="triggerImageUpload()">📁 Upload Image</button>
+  <input
+    type="file"
+    accept="image/*"
+    #imageInput
+    (change)="uploadImage($event)"
+    style="display: none;"
+  />
+
+  <!-- Submit Button -->
+  <button (click)="submitContent()" class="submit-btn">📤 Submit</button>
+  <button (click)="goToPreview()" class="preview-btn">👁️ Preview</button>
+</div>
+
+<div
+  class="editor"
+  contenteditable="true"
+  #editor
+  (input)="updateContent()"
+  (click)="onEditorClick($event)"
+>
+  <!-- Placeholder text for testing -->
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus vehicula.</p>
+</div>
+
+<!-- Floating Image Styling Toolbar -->
+<div class="image-toolbar" *ngIf="selectedImage">
+  <label>Width:
+    <input type="text" [(ngModel)]="imageStyles.width" (input)="applyImageStyles()" placeholder="e.g., 75px or 50%">
+  </label>
+
+  <label>Height:
+    <input type="text" [(ngModel)]="imageStyles.height" (input)="applyImageStyles()" placeholder="e.g., auto or 200px">
+  </label>
+
+  <label>Border Radius:
+    <input type="text" [(ngModel)]="imageStyles.borderRadius" (input)="applyImageStyles()" placeholder="e.g., 0px or 10px">
+  </label>
+
+  <!-- Text Wrapping Options -->
+  <label>Text Wrapping:
+    <select [(ngModel)]="imageStyles.float" (change)="applyImageStyles()">
+      <option value="none">None</option>
+      <option value="left">Left (Text Wraps Right)</option>
+      <option value="right">Right (Text Wraps Left)</option>
+    </select>
+  </label>
+
+  <button (click)="deselectImage()">Done</button>
+</div>
+
+<h3>Generated HTML:</h3>
+<pre>{{ content }}</pre>

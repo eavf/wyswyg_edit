@@ -1,0 +1,41 @@
+.preview-content::after {
+  content: "";
+  display: table;
+  clear: both;               /* Clears floats inside the container */
+}
+
+.preview-content {
+  display: block;
+  width: 100%;
+  border: 1px solid #ccc;
+  padding: 20px;
+  margin: 20px 0;
+  background: #f9f9f9;
+  overflow: hidden;          /* Optional: Ensures content stays within the container */
+}
+
+.preview-content img {
+  display: block;            /* Ensure images influence the parent's height */
+  max-width: 100%;          /* Ensure images don’t exceed the container width */
+  height: auto;             /* Maintain aspect ratio */
+  border: 1px solid #ddd;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+
+  /* Ensure inline width styles are respected */
+  width: auto !important;   /* Allow inline styles to control the width */
+}
+
+.back-btn {
+  padding: 10px 20px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 4px;
+}
+
+.back-btn:hover {
+  background-color: #0056b3;
+}
