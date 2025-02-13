@@ -5,18 +5,16 @@ declare global {
   }
 }
 
-import { Component, ElementRef, ViewChild, Input } from '@angular/core';
+import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { Router, RouterModule } from '@angular/router';
 import { EditorContentService } from '../editor-content.service';  // Import the shared service
-
 
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [FormsModule, CommonModule, HttpClientModule, RouterModule],
+  imports: [FormsModule, CommonModule, HttpClientModule],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.css']
 })
@@ -24,14 +22,17 @@ export class EditorComponent {
   content: string = '';
 
   // Reference to the editor div
-  @ViewChild('editor', { static: true }) editor!: ElementRef<HTMLDivElement>;
+  @ViewChild('editor', { static: false }) editor!: ElementRef<HTMLDivElement>;
 
-  // Fix: Reference to the hidden file input for image upload
+  // Reference to the hidden file input for image upload
   @ViewChild('imageInput', { static: false }) imageInput!: ElementRef<HTMLInputElement>;
 
-  apiEndpoint: string = '';  // Initialize as empty, will be set in ngOnInit()
+  @Output() goToPreview = new EventEmitter<void>();
 
-  constructor(private http: HttpClient, private router: Router, private contentService: EditorContentService) {}
+  apiEndpoint: string = '';  // Initialize as empty, will be set in ngOnInit()
+  isPreviewMode: boolean = false;
+
+  constructor(private http: HttpClient, private contentService: EditorContentService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     // Check if the API endpoint is provided via the global window object
@@ -42,10 +43,15 @@ export class EditorComponent {
       this.apiEndpoint = 'https://default-api-endpoint.com/api/save-content';
       console.warn('API endpoint not specified in CI app. Using default endpoint:', this.apiEndpoint);
     }
+  }
 
+  ngAfterViewInit() {
     // Load existing content when navigating back to the editor
     this.content = this.contentService.getContent() || '<p>Start writing your article...</p>';
     this.editor.nativeElement.innerHTML = this.content;
+
+    // Trigger change detection to resolve the ExpressionChanged error
+    this.cdr.detectChanges();
   }
 
   // Formatting functions
@@ -86,19 +92,18 @@ export class EditorComponent {
     });
   }
 
-  // Navigate to Preview Page with the content
-  goToPreview() {
+  // Trigger preview mode
+  triggerPreview() {
+    console.log('Componnent triggered function triggerPreview');
     this.updateContent();
-    console.log('Content being sent to preview:', this.content);  // Check if image styles are present
-    this.contentService.setContent(this.content);
-    this.router.navigate(['/preview']);
+    this.goToPreview.emit();
   }
 
 
 
   // Trigger the hidden file input to upload an image
   triggerImageUpload() {
-    this.imageInput.nativeElement.click();  // Now correctly references the image input
+    this.imageInput.nativeElement.click();
   }
 
   // Handle image upload and insert into the editor

@@ -1,6 +1,3 @@
 <h1>👁️ Preview Your Content</h1>
-
-<div class="preview-content" [innerHTML]="content"></div>
-
-<!-- Button to go back to the editor -->
-<button (click)="goBackToEditor()" class="back-btn">🔙 Back to Editor</button>
+<div class="preview-content" [innerHTML]="safeContent"></div>
+<button (click)="backToEditor()">🔙 Back to Editor</button>

@@ -1,31 +1,33 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
-import { AppComponent } from './app/app.component';
-import { EditorComponent } from './app/editor/editor.component';
 import { createCustomElement } from '@angular/elements';
 import { isDevMode, Injector } from '@angular/core';
-import { provideRouter, withHashLocation } from '@angular/router';
-import { routes } from './app/app.routes';
+import { AppComponent } from './app/app.component';
+import { EditorPreviewWrapperComponent } from './app/editor-preview-wrapper/editor-preview-wrapper.component';
+import { provideZoneChangeDetection } from '@angular/core';
 
 if (isDevMode()) {
-  // Development Mode: Bootstrap full Angular app
+  console.log('Development Mode: Bootstrapping full Angular app with AppComponent...');
+  // ✅ Bootstrapping AppComponent in development mode (so the full Angular app loads properly)
   bootstrapApplication(AppComponent, appConfig)
     .catch(err => console.error('Development Bootstrap Error:', err));
 } else {
-  // Production Mode: Register custom element with hash routing
-  bootstrapApplication(EditorComponent, {
-    ...appConfig,
+  console.log('Production Mode: Registering <app-editor> as a web component...');
+
+  bootstrapApplication(EditorPreviewWrapperComponent, {
     providers: [
-      provideRouter(routes, withHashLocation())  // Use hash routing (no leading slash in links)
-    ]
+      provideZoneChangeDetection(),
+      ...appConfig.providers,
+    ],
   })
-  .then(appRef => {
-    const injector = appRef.injector;
-    const editorElement = createCustomElement(EditorComponent, { injector });
-    if (!customElements.get('app-editor')) {
-      customElements.define('app-editor', editorElement);
-      console.log('<app-editor> custom element registered.');
-    }
-  })
-  .catch(err => console.error('Production Bootstrap Error:', err));
+    .then(appRef => {
+      const injector = appRef.injector;
+      const editorElement = createCustomElement(EditorPreviewWrapperComponent, { injector });
+
+      if (!customElements.get('app-editor-preview-wrapper')) {
+        customElements.define('app-editor-preview-wrapper', editorElement);
+        console.log('<app-editor-preview-wrapper> custom element registered successfully.');
+      }
+    })
+    .catch(err => console.error('Production Bootstrap Error:', err));
 }

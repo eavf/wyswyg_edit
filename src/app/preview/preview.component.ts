@@ -1,28 +1,24 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';  // Import DomSanitizer
-import { EditorContentService } from '../editor-content.service';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-preview',
+  standalone: true,
   templateUrl: './preview.component.html',
   styleUrls: ['./preview.component.css']
 })
 export class PreviewComponent {
-  content: SafeHtml = '';  // Use SafeHtml to store sanitized content
+  @Input() content: string = '';
+  @Output() closePreview = new EventEmitter<void>();
+  safeContent: SafeHtml = '';
 
-  constructor(
-    private router: Router,
-    private contentService: EditorContentService,
-    private sanitizer: DomSanitizer  // Inject DomSanitizer
-  ) {}
+  constructor(private sanitizer: DomSanitizer) {}
 
   ngOnInit() {
-    const rawContent = this.contentService.getContent() || '<p>No content to preview.</p>';
-    this.content = this.sanitizer.bypassSecurityTrustHtml(rawContent);  // Bypass Angular's sanitizer safely
+    this.safeContent = this.sanitizer.bypassSecurityTrustHtml(this.content);
   }
 
-  goBackToEditor() {
-    this.router.navigate(['/editor']);
+  backToEditor() {
+    this.closePreview.emit();
   }
 }
