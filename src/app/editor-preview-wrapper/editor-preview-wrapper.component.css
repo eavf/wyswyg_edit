@@ -1,0 +1,6 @@
+app-editor-preview-wrapper {
+  background-color: red /* rgb(161, 160, 160);*/
+}
+::ng-deep app-editor-preview-wrapper {
+  background-color: red;
+}

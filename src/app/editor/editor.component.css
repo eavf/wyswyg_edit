@@ -4,6 +4,13 @@
   font-family: Arial, sans-serif;
 }
 
+app-editor {
+  background-color: red /* rgb(161, 160, 160);*/
+}
+::ng-deep app-editor {
+  background-color: red;
+}
+
 .toolbar {
   background: #f0f0f0;
   padding: 10px;
