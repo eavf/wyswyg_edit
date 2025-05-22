@@ -1,5 +1,6 @@
-<h1>📝 HTML Editor</h1>
-
-<app-editor *ngIf="!isPreviewMode" (goToPreview)="goToPreview()"></app-editor>
-
-<app-preview *ngIf="isPreviewMode" [content]="content" (closePreview)="backToEditor()"></app-preview>
+<fieldset class="edit-section-fieldset">
+    <legend>📝 HTML Editor</legend>
+    <!-- Include other HTML elements that make up your form or display -->
+    <app-editor *ngIf="!isPreviewMode" (goToPreview)="goToPreview()"></app-editor>
+    <app-preview *ngIf="isPreviewMode" [content]="content" (closePreview)="backToEditor()"></app-preview>
+</fieldset>

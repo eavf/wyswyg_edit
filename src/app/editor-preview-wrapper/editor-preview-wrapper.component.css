@@ -1,6 +1,14 @@
-app-editor-preview-wrapper {
-  background-color: red /* rgb(161, 160, 160);*/
+:host .edit-section-fieldset {
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
 }
-::ng-deep app-editor-preview-wrapper {
-  background-color: red;
+
+:host .edit-section-fieldset legend {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
 }

@@ -13,7 +13,7 @@
                 "build": {
                     "builder": "ngx-build-plus:browser",
                     "options": {
-                        "outputPath": "dist/editor",
+                        "outputPath": "/var/www/vovo.eavf.eu/public/js/editor",
                         "index": "src/index.html",
                         "main": "src/main.ts",
                         "polyfills": [

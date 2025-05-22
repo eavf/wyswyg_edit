@@ -1,60 +1,68 @@
 // Extend the global Window interface to include apiEndpoint
 declare global {
   interface Window {
-    apiEndpoint?: string;  // Now TypeScript knows this property exists
+    apiEndpoint?: string;
   }
 }
 
-import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  Output,
+  EventEmitter,
+  ChangeDetectorRef
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { EditorContentService } from '../editor-content.service';  // Import the shared service
+import { HttpClient } from '@angular/common/http';
+import { EditorContentService } from '../editor-content.service';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [FormsModule, CommonModule, HttpClientModule],
+  imports: [FormsModule, CommonModule],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.css']
 })
 export class EditorComponent {
   content: string = '';
-
-  // Reference to the editor div
-  @ViewChild('editor', { static: false }) editor!: ElementRef<HTMLDivElement>;
-
-  // Reference to the hidden file input for image upload
-  @ViewChild('imageInput', { static: false }) imageInput!: ElementRef<HTMLInputElement>;
-
-  @Output() goToPreview = new EventEmitter<void>();
-
-  apiEndpoint: string = '';  // Initialize as empty, will be set in ngOnInit()
+  apiEndpoint: string = '';
   isPreviewMode: boolean = false;
 
-  constructor(private http: HttpClient, private contentService: EditorContentService, private cdr: ChangeDetectorRef) {}
+  @ViewChild('editor', { static: false }) editor!: ElementRef<HTMLDivElement>;
+  @ViewChild('imageInput', { static: false }) imageInput!: ElementRef<HTMLInputElement>;
+  @Output() goToPreview = new EventEmitter<void>();
+
+  selectedImage: HTMLImageElement | null = null;
+  imageStyles = {
+    width: '75px',
+    height: 'auto',
+    borderRadius: '0px',
+    float: 'none'
+  };
+
+  constructor(
+    private http: HttpClient,
+    private contentService: EditorContentService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
-    // Check if the API endpoint is provided via the global window object
-    if (window && window['apiEndpoint']) {
-      this.apiEndpoint = window['apiEndpoint'];
+    if (window.apiEndpoint) {
+      this.apiEndpoint = window.apiEndpoint;
     } else {
-      // Fallback to default API endpoint if none provided
       this.apiEndpoint = 'https://default-api-endpoint.com/api/save-content';
       console.warn('API endpoint not specified in CI app. Using default endpoint:', this.apiEndpoint);
     }
   }
 
   ngAfterViewInit() {
-    // Load existing content when navigating back to the editor
     this.content = this.contentService.getContent() || '<p>Start writing your article...</p>';
     this.editor.nativeElement.innerHTML = this.content;
-
-    // Trigger change detection to resolve the ExpressionChanged error
     this.cdr.detectChanges();
   }
 
-  // Formatting functions
   format(command: string, value: string = '') {
     document.execCommand(command, false, value);
     this.updateContent();
@@ -65,13 +73,11 @@ export class EditorComponent {
     this.updateContent();
   }
 
-  // Update content in real-time
   updateContent() {
     this.content = this.editor.nativeElement.innerHTML;
-    this.contentService.setContent(this.content);  // Save content in service
+    this.contentService.setContent(this.content);
   }
 
-  // Submit the content to the server
   submitContent() {
     if (!this.apiEndpoint) {
       alert('API endpoint is not specified!');
@@ -92,21 +98,16 @@ export class EditorComponent {
     });
   }
 
-  // Trigger preview mode
   triggerPreview() {
-    console.log('Componnent triggered function triggerPreview');
+    console.log('Component triggered function triggerPreview');
     this.updateContent();
     this.goToPreview.emit();
   }
 
-
-
-  // Trigger the hidden file input to upload an image
   triggerImageUpload() {
     this.imageInput.nativeElement.click();
   }
 
-  // Handle image upload and insert into the editor
   uploadImageEncoded(event: Event) {
     const fileInput = event.target as HTMLInputElement;
     if (fileInput.files && fileInput.files[0]) {
@@ -115,11 +116,8 @@ export class EditorComponent {
 
       reader.onload = (e: ProgressEvent<FileReader>) => {
         const imgSrc = e.target?.result as string;
-
-        // Insert the uploaded image at the cursor position
         const imgTag = `<img src="${imgSrc}" style="width: 75px; height: auto; display: inline-block; margin: 10px 0;" alt="Uploaded Image">`;
         document.execCommand('insertHTML', false, imgTag);
-
         this.updateContent();
       };
 
@@ -131,12 +129,10 @@ export class EditorComponent {
     const fileInput = event.target as HTMLInputElement;
     if (fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
-
       const formData = new FormData();
       formData.append('image', file);
 
-      // Simulate uploading the image by adding an entry to json-server
-      this.http.post<{ id: number, imageUrl: string }>('http://localhost:3000/images', {
+      this.http.post<{ id: number; imageUrl: string }>('http://localhost:3000/images', {
         imageUrl: `http://localhost:3000/uploads/images/${file.name}`
       }).subscribe({
         next: (response) => {
@@ -151,15 +147,6 @@ export class EditorComponent {
       });
     }
   }
-
-  // Image Styling Logic
-  selectedImage: HTMLImageElement | null = null;
-  imageStyles = {
-    width: '75px',
-    height: 'auto',
-    borderRadius: '0px',
-    float: 'none'
-  };
 
   onEditorClick(event: MouseEvent) {
     const target = event.target as HTMLElement;

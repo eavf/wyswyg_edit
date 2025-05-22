@@ -1,24 +1,29 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { createCustomElement } from '@angular/elements';
-import { isDevMode, Injector } from '@angular/core';
+import { isDevMode } from '@angular/core';
 import { AppComponent } from './app/app.component';
 import { EditorPreviewWrapperComponent } from './app/editor-preview-wrapper/editor-preview-wrapper.component';
 import { provideZoneChangeDetection } from '@angular/core';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+
+const commonProviders = [
+  provideZoneChangeDetection(),
+  provideHttpClient(withInterceptorsFromDi()),
+  ...appConfig.providers
+];
 
 if (isDevMode()) {
   console.log('Development Mode: Bootstrapping full Angular app with AppComponent...');
-  // ✅ Bootstrapping AppComponent in development mode (so the full Angular app loads properly)
-  bootstrapApplication(AppComponent, appConfig)
-    .catch(err => console.error('Development Bootstrap Error:', err));
+
+  bootstrapApplication(AppComponent, {
+    providers: commonProviders
+  }).catch(err => console.error('Development Bootstrap Error:', err));
 } else {
   console.log('Production Mode: Registering <app-editor> as a web component...');
 
   bootstrapApplication(EditorPreviewWrapperComponent, {
-    providers: [
-      provideZoneChangeDetection(),
-      ...appConfig.providers,
-    ],
+    providers: commonProviders
   })
     .then(appRef => {
       const injector = appRef.injector;
