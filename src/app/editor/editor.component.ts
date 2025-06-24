@@ -130,11 +130,9 @@ export class EditorComponent {
     if (fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', file);  // 'image' must match the CI form field
 
-      this.http.post<{ id: number; imageUrl: string }>('http://localhost:3000/images', {
-        imageUrl: `http://localhost:3000/uploads/images/${file.name}`
-      }).subscribe({
+      this.http.post<{ imageUrl: string }>('https://vovo.eavf.eu/upload/image', formData).subscribe({
         next: (response) => {
           const imgTag = `<img src="${response.imageUrl}" style="width: 75px; height: auto; display: inline-block; margin: 10px 0;" alt="Uploaded Image">`;
           document.execCommand('insertHTML', false, imgTag);
@@ -147,6 +145,7 @@ export class EditorComponent {
       });
     }
   }
+
 
   onEditorClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
