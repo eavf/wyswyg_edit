@@ -1,59 +1,155 @@
-# WyswygEdit
+# WYSIWYG Editor — Angular Web Component
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.1.6.
+WYSIWYG HTML editor postavený v Angular 19, distribuovaný ako **Web Component** (`<app-editor-preview-wrapper>`). Vkladá sa do ľubovoľnej stránky vrátane non-Angular projektov.
 
-## Development server
+---
 
-To start a local development server, run:
+## Architektúra
+
+```
+AppComponent (iba dev mode)
+└── EditorPreviewWrapperComponent  ← Web Component v produkcii
+    ├── EditorComponent            ← editor + toolbar + image upload
+    └── PreviewComponent           ← náhľad HTML obsahu
+         EditorContentService      ← zdieľaný stav (singleton v scope wrappera)
+```
+
+**Dev mode** (`isDevMode() === true`): bootuje `AppComponent`, plná Angular app na `localhost:4200`.  
+**Prod mode**: bootuje `EditorPreviewWrapperComponent` a registruje ho ako `customElements.define('app-editor-preview-wrapper', ...)`.
+
+### Komponenty
+
+| Komponent | Súbor | Popis |
+|---|---|---|
+| `EditorPreviewWrapperComponent` | `editor-preview-wrapper/` | Prepína medzi editor a preview režimom |
+| `EditorComponent` | `editor/` | contenteditable editor, toolbar, image upload, image styling |
+| `PreviewComponent` | `preview/` | Zobrazuje HTML obsah s Angular sanitizáciou |
+| `EditorContentService` | `editor-content.service.ts` | In-memory zdieľanie obsahu medzi komponentmi |
+
+### Formátovanie (Selection/Range API)
+
+Editor nepoužíva deprecated `document.execCommand`. Implementované metódy:
+
+| Metóda | Popis |
+|---|---|
+| `toggleInlineStyle(tag)` | Wrap/unwrap `<b>`, `<i>`, `<u>` okolo výberu |
+| `setBlockFormat(tag)` | Zmení blokový element (p, h1, h2) pod kurzorom |
+| `insertUnorderedList()` | Vytvorí `<ul><li>` zo selektovaného textu |
+| `removeAllFormatting()` | Nahradí výber čistým textom |
+| `insertHtmlAtCaret(html)` | Vloží HTML (napr. `<img>`) na pozíciu kurzora |
+| `saveSelection()` / `restoreSelection()` | Zachová výber keď toolbar ukradne focus |
+
+### Konfigurácia API endpointu
+
+Editor číta API endpoint z globálnej premennej pred bootstrapom:
+
+```javascript
+window.apiEndpoint = 'https://your-api.com/api/save-content';
+```
+
+Ak nie je nastavená, `Submit` tlačidlo zobrazí alert a nič neodošle.
+
+---
+
+## Lokálny vývoj
+
+### Prerekvizity
+
+- Node.js 18+
+- Angular CLI 19: `npm install -g @angular/cli`
+- json-server (pre testovanie image upload): `npm install -g json-server`
+
+### Inštalácia
 
 ```bash
+npm install
+```
+
+### Spustenie
+
+```bash
+# V jednom termináli — Angular dev server
 ng serve
+# → http://localhost:4200
+
+# V druhom termináli — json-server pre image upload
+json-server --watch db.json --port 3000
+# → http://localhost:3000
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+> Image upload v dev mode posiela POST na `http://localhost:3000/images` a ukladá URL do `db.json`.
 
-## Code scaffolding
+---
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Build a Deploy
+
+### Build produkčného bundle
 
 ```bash
-ng generate component component-name
+ng build --configuration production
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Výstup: `dist/editor/`
 
-```bash
-ng generate --help
+```
+dist/editor/
+├── main.js          # hlavný bundle (editor + Angular runtime)
+├── polyfills.js
+└── styles.css
 ```
 
-## Building
+> `outputHashing` je vypnutý — názvy súborov sú stabilné pre jednoduchú integráciu.
 
-To build the project run:
+### Vloženie do externej stránky
 
-```bash
-ng build
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="path/to/dist/editor/styles.css">
+</head>
+<body>
+
+  <!-- Nastav API endpoint PRED načítaním skriptu -->
+  <script>
+    window.apiEndpoint = 'https://your-api.com/api/save-content';
+  </script>
+
+  <!-- Web Component tag -->
+  <app-editor-preview-wrapper></app-editor-preview-wrapper>
+
+  <!-- Bundle -->
+  <script src="path/to/dist/editor/main.js"></script>
+
+</body>
+</html>
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+### Webpack namespace
 
-## Running unit tests
+`extra-webpack.config.js` nastavuje `chunkLoadingGlobal: 'webpackJsonpEditor'` — zabraňuje konfliktu s inými webpack bundlami na tej istej stránke.
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+### Produkčný checklist
+
+- [ ] `window.apiEndpoint` nastavený pred načítaním skriptu
+- [ ] API endpoint prijíma `POST` s telom `{ content: string }`
+- [ ] CORS povolený na API pre doménu, kde je editor vložený
+- [ ] `styles.css` načítaný (toolbar a editor štýly)
+- [ ] json-server **nie** je nasadený v produkcii
+
+---
+
+## Bezpečnosť
+
+- Preview renderuje HTML cez štandardný Angular `[innerHTML]` binding — Angular automaticky sanitizuje nebezpečné tagy (`<script>`, event handlery, `javascript:` URL)
+- Povolené tagy: `<b>`, `<i>`, `<u>`, `<h1>`, `<h2>`, `<p>`, `<ul>`, `<li>`, `<img>` a ďalšie bezpečné HTML elementy
+
+---
+
+## Testovanie
 
 ```bash
 ng test
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Unit testy bežia v Karma + Jasmine. Aktuálne sú vygenerované základné spec súbory.

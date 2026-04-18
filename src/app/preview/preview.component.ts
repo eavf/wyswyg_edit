@@ -1,5 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Component, EventEmitter, Input, Output, OnChanges } from '@angular/core';
 
 @Component({
   selector: 'app-preview',
@@ -7,16 +6,11 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
   templateUrl: './preview.component.html',
   styleUrls: ['./preview.component.css']
 })
-export class PreviewComponent {
+export class PreviewComponent implements OnChanges {
   @Input() content: string = '';
   @Output() closePreview = new EventEmitter<void>();
-  safeContent: SafeHtml = '';
 
-  constructor(private sanitizer: DomSanitizer) {}
-
-  ngOnInit() {
-    this.safeContent = this.sanitizer.bypassSecurityTrustHtml(this.content);
-  }
+  ngOnChanges() {}
 
   backToEditor() {
     this.closePreview.emit();

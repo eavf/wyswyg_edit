@@ -28,6 +28,7 @@
     #editor
     (input)="updateContent()"
     (click)="onEditorClick($event)"
+    (blur)="saveSelection()"
 >
     <!-- Placeholder text for testing -->
     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus vehicula.</p>

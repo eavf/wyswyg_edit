@@ -42,6 +42,8 @@ export class EditorComponent {
     float: 'none'
   };
 
+  private savedRange: Range | null = null;
+
   constructor(
     private http: HttpClient,
     private contentService: EditorContentService,
@@ -52,8 +54,7 @@ export class EditorComponent {
     if (window.apiEndpoint) {
       this.apiEndpoint = window.apiEndpoint;
     } else {
-      this.apiEndpoint = 'https://default-api-endpoint.com/api/save-content';
-      console.warn('API endpoint not specified in CI app. Using default endpoint:', this.apiEndpoint);
+      console.warn('API endpoint not specified. Set window.apiEndpoint before using the editor.');
     }
   }
 
@@ -63,14 +64,158 @@ export class EditorComponent {
     this.cdr.detectChanges();
   }
 
-  format(command: string, value: string = '') {
-    document.execCommand(command, false, value);
+  saveSelection() {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      this.savedRange = selection.getRangeAt(0).cloneRange();
+    }
+  }
+
+  private restoreSelection() {
+    if (!this.savedRange) return;
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(this.savedRange);
+    }
+    this.editor.nativeElement.focus();
+  }
+
+  private toggleInlineStyle(tag: string) {
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
+
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const parentEl = (container.nodeType === Node.TEXT_NODE
+      ? container.parentElement
+      : container) as HTMLElement;
+
+    const existing = parentEl.closest(tag);
+    if (existing && this.editor.nativeElement.contains(existing)) {
+      const parent = existing.parentNode!;
+      const frag = document.createDocumentFragment();
+      while (existing.firstChild) frag.appendChild(existing.firstChild);
+      parent.replaceChild(frag, existing);
+    } else {
+      const wrapper = document.createElement(tag);
+      try {
+        range.surroundContents(wrapper);
+      } catch {
+        wrapper.appendChild(range.extractContents());
+        range.insertNode(wrapper);
+      }
+      const newRange = document.createRange();
+      newRange.selectNodeContents(wrapper);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
     this.updateContent();
   }
 
-  clearFormatting() {
-    document.execCommand('removeFormat');
+  private setBlockFormat(tag: string) {
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    let node: Node | null = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+
+    const blockTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'DIV'];
+    let block: HTMLElement | null = node as HTMLElement;
+    while (block && block !== this.editor.nativeElement && !blockTags.includes(block.tagName?.toUpperCase())) {
+      block = block.parentElement;
+    }
+
+    if (block && block !== this.editor.nativeElement) {
+      const newBlock = document.createElement(tag);
+      newBlock.innerHTML = block.innerHTML;
+      block.parentNode?.replaceChild(newBlock, block);
+    }
     this.updateContent();
+  }
+
+  private insertUnorderedList() {
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    const ul = document.createElement('ul');
+    const selectedText = range.toString();
+    const lines = selectedText ? selectedText.split('\n') : [''];
+    lines.forEach(line => {
+      const li = document.createElement('li');
+      li.textContent = line || '';
+      ul.appendChild(li);
+    });
+
+    range.deleteContents();
+    range.insertNode(ul);
+
+    const newRange = document.createRange();
+    newRange.setStartAfter(ul);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    this.updateContent();
+  }
+
+  private removeAllFormatting() {
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
+
+    const range = selection.getRangeAt(0);
+    const text = document.createTextNode(range.toString());
+    range.deleteContents();
+    range.insertNode(text);
+
+    const newRange = document.createRange();
+    newRange.selectNode(text);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    this.updateContent();
+  }
+
+  private insertHtmlAtCaret(html: string) {
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const frag = template.content;
+    const lastNode = frag.lastChild;
+    range.insertNode(frag);
+
+    if (lastNode) {
+      const newRange = document.createRange();
+      newRange.setStartAfter(lastNode);
+      newRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
+    this.updateContent();
+  }
+
+  format(command: string, value: string = '') {
+    switch (command) {
+      case 'bold':                this.toggleInlineStyle('b'); break;
+      case 'italic':              this.toggleInlineStyle('i'); break;
+      case 'underline':           this.toggleInlineStyle('u'); break;
+      case 'insertUnorderedList': this.insertUnorderedList(); break;
+      case 'formatBlock':         this.setBlockFormat(value); break;
+    }
+  }
+
+  clearFormatting() {
+    this.removeAllFormatting();
   }
 
   updateContent() {
@@ -99,7 +244,6 @@ export class EditorComponent {
   }
 
   triggerPreview() {
-    console.log('Component triggered function triggerPreview');
     this.updateContent();
     this.goToPreview.emit();
   }
@@ -117,8 +261,7 @@ export class EditorComponent {
       reader.onload = (e: ProgressEvent<FileReader>) => {
         const imgSrc = e.target?.result as string;
         const imgTag = `<img src="${imgSrc}" style="width: 75px; height: auto; display: inline-block; margin: 10px 0;" alt="Uploaded Image">`;
-        document.execCommand('insertHTML', false, imgTag);
-        this.updateContent();
+        this.insertHtmlAtCaret(imgTag);
       };
 
       reader.readAsDataURL(file);
@@ -130,13 +273,12 @@ export class EditorComponent {
     if (fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
       const formData = new FormData();
-      formData.append('image', file);  // 'image' must match the CI form field
+      formData.append('image', file);
 
       this.http.post<{ imageUrl: string }>('https://vovo.eavf.eu/upload/image', formData).subscribe({
         next: (response) => {
           const imgTag = `<img src="${response.imageUrl}" style="width: 75px; height: auto; display: inline-block; margin: 10px 0;" alt="Uploaded Image">`;
-          document.execCommand('insertHTML', false, imgTag);
-          this.updateContent();
+          this.insertHtmlAtCaret(imgTag);
         },
         error: (error) => {
           alert('Error uploading image.');
@@ -145,7 +287,6 @@ export class EditorComponent {
       });
     }
   }
-
 
   onEditorClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
