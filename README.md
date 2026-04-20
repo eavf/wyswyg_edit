@@ -36,8 +36,36 @@ Editor nepoužíva deprecated `document.execCommand`. Implementované metódy:
 | `setBlockFormat(tag)` | Zmení blokový element (p, h1, h2) pod kurzorom |
 | `insertUnorderedList()` | Vytvorí `<ul><li>` zo selektovaného textu |
 | `removeAllFormatting()` | Nahradí výber čistým textom |
-| `insertHtmlAtCaret(html)` | Vloží HTML (napr. `<img>`) na pozíciu kurzora |
+| `insertLink()` | Vloží `<a href>` okolo výberu; ak je kurzor v odkaze, ponúkne úpravu alebo zmazanie |
 | `saveSelection()` / `restoreSelection()` | Zachová výber keď toolbar ukradne focus |
+| `insertImgAtRange(img, range)` | Vloží obrázok na pozíciu kurzora — rozdelí paragraph |
+
+### Image Upload
+
+Obrázky sa vkladajú ako base64 data URI (bez servera):
+
+1. Súbor sa načíta cez `URL.createObjectURL`
+2. Canvas zmenší obrázok na max **800px** šírky, JPEG kvalita 80 %
+3. Výsledný `data:image/jpeg;base64,...` sa vloží do DOM na pozíciu kurzora
+4. Paragraph sa rozdelí — obrázok je **súrodenec** `<p>` elementov, nie vnorený
+
+**Počiatočná veľkosť:** `width:auto; max-width:150px` — malé obrázky sa nenaťahujú, veľké sa obmedzia.
+
+### Image Toolbar
+
+Po kliknutí na obrázok v editore sa zobrazí floating panel:
+
+| Ovládač | Popis |
+|---|---|
+| Obtekanie | Blok (centrovane) / Vľavo (float left) / Vpravo (float right) |
+| Veľkosť | S=150px, M=300px, L=500px, Full=100% šírky editora |
+| Zaoblenie | Slider 0–50px pre `border-radius` |
+
+### CSS architektúra — dôležité
+
+- **`styles.css` (globálny)** obsahuje `.editor img` a `.img-*` triedy — component CSS nefunguje na dynamicky vložený obsah cez contenteditable (Angular `_ngcontent` scoping)
+- **`.editor` div** má `width:100%; max-width:100vw` — zabraňuje nafúknutiu pri veľkých obrázkoch
+- **Preview** používa CSS triedy (inline štýly sú stripované Angular sanitizerom), preto musia byť hodnoty v `styles.css` synchronizované s hodnotami v `applyImageStyles()`
 
 ### Konfigurácia API endpointu
 
@@ -142,7 +170,7 @@ dist/editor/
 ## Bezpečnosť
 
 - Preview renderuje HTML cez štandardný Angular `[innerHTML]` binding — Angular automaticky sanitizuje nebezpečné tagy (`<script>`, event handlery, `javascript:` URL)
-- Povolené tagy: `<b>`, `<i>`, `<u>`, `<h1>`, `<h2>`, `<p>`, `<ul>`, `<li>`, `<img>` a ďalšie bezpečné HTML elementy
+- Povolené tagy: `<b>`, `<i>`, `<u>`, `<h1>`, `<h2>`, `<p>`, `<ul>`, `<li>`, `<img>`, `<a>` a ďalšie bezpečné HTML elementy
 
 ---
 

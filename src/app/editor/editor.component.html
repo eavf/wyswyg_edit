@@ -7,12 +7,13 @@
     <button (click)="format('formatBlock', 'h2')">H2</button>
     <button (click)="format('formatBlock', 'p')">P</button>
     <button (click)="clearFormatting()">Clear</button>
+    <button (click)="insertLink()">🔗 Link</button>
     <button (click)="triggerImageUpload()">📁 Upload Image</button>
     <input
         type="file"
         accept="image/*"
         #imageInput
-        (change)="uploadImage($event)"
+        (change)="uploadImageEncoded($event)"
         style="display: none;"
     />
 
@@ -30,34 +31,36 @@
     (click)="onEditorClick($event)"
     (blur)="saveSelection()"
 >
-    <!-- Placeholder text for testing -->
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus vehicula.</p>
 </div>
 
-<!-- Floating Image Styling Toolbar -->
-<div class="image-toolbar" *ngIf="selectedImage">
-    <label>Width:
-        <input type="text" [(ngModel)]="imageStyles.width" (input)="applyImageStyles()" placeholder="e.g., 75px or 50%">
-    </label>
+<!-- Image Styling Toolbar -->
+<div class="image-toolbar" *ngIf="selectedImage" [ngStyle]="imageToolbarPos">
 
-    <label>Height:
-        <input type="text" [(ngModel)]="imageStyles.height" (input)="applyImageStyles()" placeholder="e.g., auto or 200px">
-    </label>
+    <div class="imt-row">
+        <span class="imt-label">Obtekanie</span>
+        <div class="float-btns">
+            <button [class.active]="imageStyles.float === 'none'" (click)="setFloat('none')">⬛ Blok</button>
+            <button [class.active]="imageStyles.float === 'left'" (click)="setFloat('left')">◧ Vľavo</button>
+            <button [class.active]="imageStyles.float === 'right'" (click)="setFloat('right')">◨ Vpravo</button>
+        </div>
+    </div>
 
-    <label>Border Radius:
-        <input type="text" [(ngModel)]="imageStyles.borderRadius" (input)="applyImageStyles()" placeholder="e.g., 0px or 10px">
-    </label>
+    <div class="imt-row">
+        <span class="imt-label">Veľkosť</span>
+        <div class="float-btns">
+            <button [class.active]="imageSize === 'img-sm'"   (click)="setSize('img-sm')">S</button>
+            <button [class.active]="imageSize === 'img-md'"   (click)="setSize('img-md')">M</button>
+            <button [class.active]="imageSize === 'img-lg'"   (click)="setSize('img-lg')">L</button>
+            <button [class.active]="imageSize === 'img-full'" (click)="setSize('img-full')">Full</button>
+        </div>
+    </div>
 
-    <!-- Text Wrapping Options -->
-    <label>Text Wrapping:
-        <select [(ngModel)]="imageStyles.float" (change)="applyImageStyles()">
-            <option value="none">None</option>
-            <option value="left">Left (Text Wraps Right)</option>
-            <option value="right">Right (Text Wraps Left)</option>
-        </select>
-    </label>
+    <div class="imt-row">
+        <span class="imt-label">Zaoblenie: <b>{{ imageRadiusPx }}px</b></span>
+        <input type="range" min="0" max="50" step="1" [(ngModel)]="imageRadiusPx" (input)="onRadiusSlider()">
+    </div>
 
-    <button (click)="deselectImage()">Done</button>
+    <button class="imt-close" (click)="deselectImage()">✕ Zavrieť</button>
 </div>
 
 <h3>Generated HTML:</h3>

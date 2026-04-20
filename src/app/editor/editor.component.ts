@@ -41,6 +41,9 @@ export class EditorComponent {
     borderRadius: '0px',
     float: 'none'
   };
+  imageSize: string = 'img-md';
+  imageRadiusPx: number = 0;
+  imageToolbarPos: { [key: string]: string } = {};
 
   private savedRange: Range | null = null;
 
@@ -59,7 +62,7 @@ export class EditorComponent {
   }
 
   ngAfterViewInit() {
-    this.content = this.contentService.getContent() || '<p>Start writing your article...</p>';
+    this.content = this.contentService.getContent() || '<p>Začnite písať článok...</p>';
     this.editor.nativeElement.innerHTML = this.content;
     this.cdr.detectChanges();
   }
@@ -204,6 +207,49 @@ export class EditorComponent {
     this.updateContent();
   }
 
+  insertLink() {
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    const existing = (range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+      ? range.commonAncestorContainer.parentElement
+      : range.commonAncestorContainer as HTMLElement)?.closest('a');
+
+    if (existing && this.editor.nativeElement.contains(existing)) {
+      const newUrl = prompt('Upraviť URL odkazu:', existing.getAttribute('href') || '');
+      if (newUrl === null) return;
+      if (newUrl.trim() === '') {
+        const parent = existing.parentNode!;
+        const frag = document.createDocumentFragment();
+        while (existing.firstChild) frag.appendChild(existing.firstChild);
+        parent.replaceChild(frag, existing);
+      } else {
+        existing.setAttribute('href', newUrl.trim());
+      }
+    } else {
+      const url = prompt('Zadajte URL odkazu:');
+      if (!url || url.trim() === '') return;
+      const anchor = document.createElement('a');
+      anchor.href = url.trim();
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      if (range.collapsed) {
+        anchor.textContent = url.trim();
+        range.insertNode(anchor);
+      } else {
+        try {
+          range.surroundContents(anchor);
+        } catch {
+          anchor.appendChild(range.extractContents());
+          range.insertNode(anchor);
+        }
+      }
+    }
+    this.updateContent();
+  }
+
   format(command: string, value: string = '') {
     switch (command) {
       case 'bold':                this.toggleInlineStyle('b'); break;
@@ -254,18 +300,63 @@ export class EditorComponent {
 
   uploadImageEncoded(event: Event) {
     const fileInput = event.target as HTMLInputElement;
-    if (fileInput.files && fileInput.files[0]) {
-      const file = fileInput.files[0];
-      const reader = new FileReader();
+    if (!fileInput.files || !fileInput.files[0]) return;
+    const file = fileInput.files[0];
+    const rangeAtUpload = this.savedRange ? this.savedRange.cloneRange() : null;
+    const objectUrl = URL.createObjectURL(file);
+    const tempImg = new Image();
+    tempImg.onload = () => {
+      const maxW = 800;
+      const w = tempImg.naturalWidth || maxW;
+      const h = tempImg.naturalHeight || 600;
+      const scale = Math.min(1, maxW / w);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { URL.revokeObjectURL(objectUrl); return; }
+      ctx.drawImage(tempImg, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      const dataUri = canvas.toDataURL('image/jpeg', 0.8);
+      const img = document.createElement('img');
+      img.src = dataUri;
+      img.className = 'img-block img-sm';
+      img.style.cssText = 'display:block; width:auto; max-width:150px; height:auto; margin:10px auto;';
+      this.insertImgAtRange(img, rangeAtUpload);
+    };
+    tempImg.onerror = () => URL.revokeObjectURL(objectUrl);
+    tempImg.src = objectUrl;
+  }
 
-      reader.onload = (e: ProgressEvent<FileReader>) => {
-        const imgSrc = e.target?.result as string;
-        const imgTag = `<img src="${imgSrc}" style="width: 75px; height: auto; display: inline-block; margin: 10px 0;" alt="Uploaded Image">`;
-        this.insertHtmlAtCaret(imgTag);
-      };
-
-      reader.readAsDataURL(file);
+  private insertImgAtRange(img: HTMLImageElement, range: Range | null) {
+    if (range && this.editor.nativeElement.contains(range.startContainer)) {
+      let node: Node | null = range.startContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+      const blockTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
+      let block: HTMLElement | null = node as HTMLElement;
+      while (block && block !== this.editor.nativeElement && !blockTags.includes(block.tagName?.toUpperCase() ?? '')) {
+        block = block.parentElement;
+      }
+      if (block && block !== this.editor.nativeElement) {
+        const splitRange = document.createRange();
+        splitRange.setStart(range.startContainer, range.startOffset);
+        splitRange.setEnd(block, block.childNodes.length);
+        const afterFrag = splitRange.extractContents();
+        const afterBlock = document.createElement(block.tagName.toLowerCase());
+        afterBlock.appendChild(afterFrag);
+        if (!afterBlock.textContent?.trim()) afterBlock.innerHTML = '<br>';
+        if (!block.textContent?.trim()) block.innerHTML = '<br>';
+        block.parentNode!.insertBefore(img, block.nextSibling);
+        block.parentNode!.insertBefore(afterBlock, img.nextSibling);
+        this.updateContent();
+        return;
+      }
     }
+    const p = document.createElement('p');
+    p.innerHTML = '<br>';
+    this.editor.nativeElement.appendChild(img);
+    this.editor.nativeElement.appendChild(p);
+    this.updateContent();
   }
 
   uploadImage(event: Event) {
@@ -291,44 +382,102 @@ export class EditorComponent {
   onEditorClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (target.tagName.toLowerCase() === 'img') {
+      if (this.selectedImage) this.selectedImage.classList.remove('selected-img');
       this.selectedImage = target as HTMLImageElement;
+      this.selectedImage.classList.add('selected-img');
       this.loadCurrentImageStyles();
+      this.cdr.detectChanges();
+      this.updateToolbarPosition();
+      this.cdr.detectChanges();
     } else {
       this.selectedImage = null;
+      this.cdr.detectChanges();
     }
+  }
+
+  private updateToolbarPosition() {
+    if (!this.selectedImage) return;
+    const rect = this.selectedImage.getBoundingClientRect();
+    const toolbarH = 160;
+    const toolbarW = 310;
+    let top: number;
+    let left: number;
+    if (rect.width === 0 || rect.height === 0) {
+      top = Math.max(60, window.innerHeight / 2 - toolbarH / 2);
+      left = Math.max(8, window.innerWidth / 2 - toolbarW / 2);
+    } else {
+      top = rect.top > toolbarH + 16 ? rect.top - toolbarH - 8 : rect.bottom + 8;
+      left = Math.max(8, Math.min(rect.left, window.innerWidth - toolbarW - 8));
+    }
+    this.imageToolbarPos = { top: `${top}px`, left: `${left}px` };
   }
 
   loadCurrentImageStyles() {
     if (this.selectedImage) {
       const style = this.selectedImage.style;
-      this.imageStyles.width = style.width || '75px';
-      this.imageStyles.height = style.height || 'auto';
-      this.imageStyles.borderRadius = style.borderRadius || '0px';
-      this.imageStyles.float = style.float || 'none';
+      this.imageRadiusPx = parseInt(style.borderRadius) || 0;
+      const cl = this.selectedImage.classList;
+      this.imageStyles.float = cl.contains('img-left') ? 'left'
+        : cl.contains('img-right') ? 'right' : 'none';
+      this.imageSize = cl.contains('img-sm') ? 'img-sm'
+        : cl.contains('img-lg') ? 'img-lg'
+        : cl.contains('img-full') ? 'img-full' : 'img-md';
     }
+  }
+
+  setSize(size: string) {
+    this.imageSize = size;
+    this.applyImageStyles();
+  }
+
+  onRadiusSlider() {
+    this.imageStyles.borderRadius = `${this.imageRadiusPx}px`;
+    this.applyImageStyles();
+  }
+
+  setFloat(value: string) {
+    this.imageStyles.float = value;
+    this.applyImageStyles();
   }
 
   applyImageStyles() {
-    if (this.selectedImage) {
-      this.selectedImage.style.width = this.imageStyles.width;
-      this.selectedImage.style.height = this.imageStyles.height;
-      this.selectedImage.style.borderRadius = this.imageStyles.borderRadius;
+    if (!this.selectedImage) return;
 
-      if (this.imageStyles.float === 'left' || this.imageStyles.float === 'right') {
-        this.selectedImage.style.float = this.imageStyles.float;
-        this.selectedImage.style.display = 'inline';
-        this.selectedImage.style.margin = '10px';
-      } else {
-        this.selectedImage.style.float = 'none';
-        this.selectedImage.style.display = 'block';
-        this.selectedImage.style.margin = '10px auto';
-      }
+    const sizeMap: { [k: string]: string } = {
+      'img-sm': '150px', 'img-md': '300px', 'img-lg': '500px', 'img-full': '100%'
+    };
 
-      this.updateContent();
+    this.selectedImage.classList.remove('img-sm', 'img-md', 'img-lg', 'img-full');
+    this.selectedImage.classList.add(this.imageSize);
+    this.selectedImage.style.width = sizeMap[this.imageSize] ?? '150px';
+    this.selectedImage.style.maxWidth = '100%';
+    this.selectedImage.style.height = 'auto';
+    this.selectedImage.style.borderRadius = `${this.imageRadiusPx}px`;
+
+    this.selectedImage.classList.remove('img-left', 'img-right', 'img-block');
+    if (this.imageStyles.float === 'left') {
+      this.selectedImage.classList.add('img-left');
+      this.selectedImage.style.float = 'left';
+      this.selectedImage.style.display = 'block';
+      this.selectedImage.style.margin = '8px 16px 8px 0';
+    } else if (this.imageStyles.float === 'right') {
+      this.selectedImage.classList.add('img-right');
+      this.selectedImage.style.float = 'right';
+      this.selectedImage.style.display = 'block';
+      this.selectedImage.style.margin = '8px 0 8px 16px';
+    } else {
+      this.selectedImage.classList.add('img-block');
+      this.selectedImage.style.float = '';
+      this.selectedImage.style.display = 'block';
+      this.selectedImage.style.margin = '10px auto';
     }
+
+    this.updateContent();
+    requestAnimationFrame(() => this.updateToolbarPosition());
   }
 
   deselectImage() {
+    if (this.selectedImage) this.selectedImage.classList.remove('selected-img');
     this.selectedImage = null;
   }
 }

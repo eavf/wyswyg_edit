@@ -1,1 +1,45 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* Styles for images inside contenteditable — must be global (no _ngcontent scoping) */
+.editor img {
+  max-width: 100% !important;
+  height: auto;
+  border: 2px solid #aaa;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+  min-width: 40px;
+  min-height: 40px;
+  background: repeating-conic-gradient(#ccc 0% 25%, #eee 0% 50%) 0 0 / 16px 16px;
+}
+
+.editor img.selected-img {
+  outline: 3px solid #1976d2;
+}
+
+/* Image float classes — global, fungujú aj v [innerHTML] preview */
+img.img-left {
+  float: left;
+  display: inline;
+  margin: 8px 16px 8px 0;
+}
+
+img.img-right {
+  float: right;
+  display: inline;
+  margin: 8px 0 8px 16px;
+}
+
+img.img-block {
+  float: none;
+  display: block;
+  margin: 10px auto;
+}
+
+/* Image size classes — must match applyImageStyles() pixel values */
+img.img-sm, img.img-md, img.img-lg, img.img-full {
+  height: auto;
+  max-width: 100%;
+}
+img.img-sm   { width: auto; max-width: 150px; }
+img.img-md   { width: 300px; }
+img.img-lg   { width: 500px; }
+img.img-full { width: 100%; }
