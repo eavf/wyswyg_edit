@@ -9,6 +9,7 @@ import {
   Component,
   ElementRef,
   ViewChild,
+  Input,
   Output,
   EventEmitter,
   ChangeDetectorRef
@@ -26,8 +27,8 @@ import { EditorContentService } from '../editor-content.service';
   styleUrls: ['./editor.component.css']
 })
 export class EditorComponent {
+  @Input() apiUrl: string = '';
   content: string = '';
-  apiEndpoint: string = '';
   isPreviewMode: boolean = false;
 
   @ViewChild('editor', { static: false }) editor!: ElementRef<HTMLDivElement>;
@@ -54,10 +55,8 @@ export class EditorComponent {
   ) {}
 
   ngOnInit() {
-    if (window.apiEndpoint) {
-      this.apiEndpoint = window.apiEndpoint;
-    } else {
-      console.warn('API endpoint not specified. Set window.apiEndpoint before using the editor.');
+    if (!this.apiUrl && window.apiEndpoint) {
+      this.apiUrl = window.apiEndpoint;
     }
   }
 
@@ -270,23 +269,42 @@ export class EditorComponent {
   }
 
   submitContent() {
-    if (!this.apiEndpoint) {
-      alert('API endpoint is not specified!');
-      return;
+    const { formData, imageCount } = this.buildSubmitPayload();
+
+    window.dispatchEvent(new CustomEvent('editor-submit', {
+      detail: { formData, imageCount }
+    }));
+
+    if (this.apiUrl) {
+      this.http.post(this.apiUrl, formData).subscribe({
+        next: () => alert('Obsah odoslaný.'),
+        error: (err) => { alert('Chyba pri odosielaní.'); console.error(err); }
+      });
     }
+  }
 
-    const payload = { content: this.content };
+  private buildSubmitPayload(): { formData: FormData, imageCount: number } {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(this.content, 'text/html');
+    const imgs = Array.from(doc.querySelectorAll('img[src^="data:"]'));
+    const formData = new FormData();
+    let imageCount = 0;
 
-    this.http.post(this.apiEndpoint, payload).subscribe({
-      next: (response) => {
-        alert('Content submitted successfully!');
-        console.log('Server response:', response);
-      },
-      error: (error) => {
-        alert('Error submitting content.');
-        console.error('Submission error:', error);
+    imgs.forEach((img, i) => {
+      const src = img.getAttribute('src')!;
+      const m = src.match(/^data:([^;]+);base64,(.+)$/);
+      if (m) {
+        const [, mime, b64] = m;
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const ext = mime.split('/')[1] || 'jpg';
+        formData.append(`image_${i}`, new Blob([bytes], { type: mime }), `image_${i}.${ext}`);
+        img.setAttribute('src', `__img_${i}__`);
+        imageCount++;
       }
     });
+
+    formData.append('content', doc.body.innerHTML);
+    return { formData, imageCount };
   }
 
   triggerPreview() {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EditorComponent } from '../editor/editor.component';
 import { PreviewComponent } from '../preview/preview.component';
@@ -13,6 +13,7 @@ import { EditorContentService } from '../editor-content.service';
   providers: [EditorContentService]
 })
 export class EditorPreviewWrapperComponent {
+  @Input() apiUrl: string = '';
   isPreviewMode = false;
   content: string = '';
 

@@ -67,15 +67,72 @@ Po kliknutí na obrázok v editore sa zobrazí floating panel:
 - **`.editor` div** má `width:100%; max-width:100vw` — zabraňuje nafúknutiu pri veľkých obrázkoch
 - **Preview** používa CSS triedy (inline štýly sú stripované Angular sanitizerom), preto musia byť hodnoty v `styles.css` synchronizované s hodnotami v `applyImageStyles()`
 
-### Konfigurácia API endpointu
+### Submit — integrácia s backendom
 
-Editor číta API endpoint z globálnej premennej pred bootstrapom:
+Pri stlačení **Submit** editor:
+1. Nájde všetky `<img src="data:...">` v obsahu
+2. Nahradí ich placeholdermi `__img_0__`, `__img_1__`...
+3. Odošle `multipart/form-data` s poľom `content` a súbormi `image_0.jpg`, `image_1.jpg`...
+4. Vždy dispatchne `editor-submit` event na `window`
 
-```javascript
-window.apiEndpoint = 'https://your-api.com/api/save-content';
+Backend dostane:
+```
+content   →  "<p>text</p><img src="__img_0__"><p>ďalší text</p>"
+image_0   →  [binary JPEG]
+image_1   →  [binary JPEG]
 ```
 
-Ak nie je nastavená, `Submit` tlačidlo zobrazí alert a nič neodošle.
+#### Možnosť A — HTML atribút (editor pošle sám)
+
+```html
+<app-editor-preview-wrapper api-url="/api/save-post"></app-editor-preview-wrapper>
+```
+
+Editor pošle `multipart/form-data` POST priamo na zadanú URL.
+
+#### Možnosť B — Custom DOM event (blog spracuje sám)
+
+```html
+<app-editor-preview-wrapper></app-editor-preview-wrapper>
+<script>
+window.addEventListener('editor-submit', (e) => {
+  fetch('/api/save-post', { method: 'POST', body: e.detail.formData });
+});
+</script>
+```
+
+> Obe možnosti je možné kombinovať. `editor-submit` event sa dispatchne vždy, aj keď je nastavený `api-url`.
+
+#### Fallback — window.apiEndpoint (spätná kompatibilita)
+
+```javascript
+window.apiEndpoint = 'https://your-api.com/api/save-post';
+```
+
+Ak nie je nastavený `api-url` atribút, editor použije `window.apiEndpoint`.
+
+#### Príklad Python (Flask)
+
+```python
+@app.route('/api/save-post', methods=['POST'])
+def save_post():
+    content = request.form['content']       # HTML s __img_N__ placeholdermi
+    image_urls = {}
+
+    for key in request.files:               # image_0, image_1, ...
+        img_file = request.files[key]
+        index = key.split('_')[1]
+        path = f'/var/www/blog/images/{img_file.filename}'
+        img_file.save(path)
+        image_urls[f'__img_{index}__'] = f'/images/{img_file.filename}'
+
+    for placeholder, url in image_urls.items():
+        content = content.replace(placeholder, url)
+
+    # content teraz obsahuje reálne URL namiesto placeholderov
+    db.save_post(content)
+    return jsonify({'status': 'ok'})
+```
 
 ---
 
