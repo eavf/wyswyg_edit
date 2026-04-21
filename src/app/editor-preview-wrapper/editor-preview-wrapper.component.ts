@@ -14,6 +14,12 @@ import { EditorContentService } from '../editor-content.service';
 })
 export class EditorPreviewWrapperComponent {
   @Input() apiUrl: string = '';
+  @Input() set initialContent(val: string) {
+    if (val !== undefined) {
+      this.isPreviewMode = false;
+      this.contentService.reset(val);
+    }
+  }
   isPreviewMode = false;
   content: string = '';
 

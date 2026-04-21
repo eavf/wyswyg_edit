@@ -64,6 +64,13 @@ export class EditorComponent {
     this.content = this.contentService.getContent() || '<p>Začnite písať článok...</p>';
     this.editor.nativeElement.innerHTML = this.content;
     this.cdr.detectChanges();
+
+    this.contentService.onReset.subscribe(content => {
+      this.content = content || '<p>Začnite písať článok...</p>';
+      this.editor.nativeElement.innerHTML = this.content;
+      this.selectedImage = null;
+      this.cdr.detectChanges();
+    });
   }
 
   saveSelection() {
@@ -270,9 +277,10 @@ export class EditorComponent {
 
   submitContent() {
     const { formData, imageCount } = this.buildSubmitPayload();
+    const fullContent = this.content;
 
     window.dispatchEvent(new CustomEvent('editor-submit', {
-      detail: { formData, imageCount }
+      detail: { formData, imageCount, fullContent }
     }));
 
     if (this.apiUrl) {
