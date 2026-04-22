@@ -66,8 +66,8 @@ export class EditorComponent {
     this.cdr.detectChanges();
 
     this.contentService.onReset.subscribe(content => {
-      this.content = content || '<p>Začnite písať článok...</p>';
-      this.editor.nativeElement.innerHTML = this.content;
+      this.content = content;
+      this.editor.nativeElement.innerHTML = content;
       this.selectedImage = null;
       this.cdr.detectChanges();
     });

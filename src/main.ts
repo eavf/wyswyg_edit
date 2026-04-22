@@ -30,7 +30,7 @@ if (isDevMode()) {
       const editorElement = createCustomElement(EditorPreviewWrapperComponent, { injector });
 
       if (!customElements.get('app-editor-preview-wrapper')) {
-        customElements.define('app-editor-preview-wrapper', editorElement);
+        customElements.define('vovo-editor', editorElement);
         console.log('<app-editor-preview-wrapper> custom element registered successfully.');
       }
     })
