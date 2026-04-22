@@ -1,14 +1,7 @@
-.editor-container {
-  width: 80%;
-  margin: 20px auto;
-  font-family: Arial, sans-serif;
-}
-
-app-editor {
-  background-color: red /* rgb(161, 160, 160);*/
-}
-::ng-deep app-editor {
-  background-color: red;
+:host {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .toolbar {
@@ -40,8 +33,11 @@ app-editor {
   padding: 10px;
   background: #fff;
   width: 100%;
-  max-width: 100vw;
+  max-width: 100%;
   box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* .editor img styles are in global styles.css — component CSS doesn't reach contenteditable children */
@@ -121,5 +117,8 @@ pre {
   background: #f9f9f9;
   padding: 10px;
   border: 1px solid #ccc;
+  max-width: 100%;
   overflow-x: auto;
+  white-space: pre-wrap;
+  box-sizing: border-box;
 }
