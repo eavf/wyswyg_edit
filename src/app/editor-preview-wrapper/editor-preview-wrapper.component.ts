@@ -5,7 +5,7 @@ import { PreviewComponent } from '../preview/preview.component';
 import { EditorContentService } from '../editor-content.service';
 
 @Component({
-  selector: 'app-editor-preview-wrapper',
+  selector: 'vovo-editor',
   standalone: true,
   imports: [CommonModule, EditorComponent, PreviewComponent],
   templateUrl: './editor-preview-wrapper.component.html',

@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EditorContentService {
   private content: string = '';
-  private reset$ = new Subject<string>();
+  private reset$ = new BehaviorSubject<string | null>(null);
 
   setContent(newContent: string) {
     this.content = newContent;

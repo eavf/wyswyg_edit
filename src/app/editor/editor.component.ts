@@ -12,7 +12,8 @@ import {
   Input,
   Output,
   EventEmitter,
-  ChangeDetectorRef
+  ChangeDetectorRef,
+  NgZone
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -51,7 +52,8 @@ export class EditorComponent {
   constructor(
     private http: HttpClient,
     private contentService: EditorContentService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit() {
@@ -61,16 +63,24 @@ export class EditorComponent {
   }
 
   ngAfterViewInit() {
-    this.content = this.contentService.getContent() || '<p>Začnite písať článok...</p>';
-    this.editor.nativeElement.innerHTML = this.content;
-    this.cdr.detectChanges();
-
     this.contentService.onReset.subscribe(content => {
+      if (content === null) return;
       this.content = content;
-      this.editor.nativeElement.innerHTML = content;
       this.selectedImage = null;
+      this.ngZone.runOutsideAngular(() => {
+        Promise.resolve().then(() => {
+          if (this.editor?.nativeElement) {
+            this.editor.nativeElement.innerHTML = content;
+          }
+        });
+      });
       this.cdr.detectChanges();
     });
+
+    const initial = this.contentService.getContent();
+    this.content = initial || '<p>Začnite písať článok...</p>';
+    this.editor.nativeElement.innerHTML = this.content;
+    this.cdr.detectChanges();
   }
 
   saveSelection() {
