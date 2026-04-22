@@ -321,6 +321,7 @@ export class EditorComponent {
   }
 
   triggerImageUpload() {
+    this.saveSelection();
     this.imageInput.nativeElement.click();
   }
 
@@ -346,8 +347,8 @@ export class EditorComponent {
       const dataUri = canvas.toDataURL('image/jpeg', 0.8);
       const img = document.createElement('img');
       img.src = dataUri;
-      img.className = 'img-block img-sm';
-      img.style.cssText = 'display:block; width:auto; max-width:150px; height:auto; margin:10px auto;';
+      img.className = 'img-left img-sm';
+      img.style.cssText = 'float:left; display:block; width:150px; height:auto; margin:8px 16px 8px 0;';
       this.insertImgAtRange(img, rangeAtUpload);
     };
     tempImg.onerror = () => URL.revokeObjectURL(objectUrl);
@@ -377,7 +378,18 @@ export class EditorComponent {
         this.updateContent();
         return;
       }
+
+      // kurzor je na top-leveli (nie v bloku) — vlož na miesto kurzora
+      const r = range.cloneRange();
+      r.collapse(true);
+      r.insertNode(img);
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      img.parentNode?.insertBefore(p, img.nextSibling);
+      this.updateContent();
+      return;
     }
+    // fallback — keď range je null
     const p = document.createElement('p');
     p.innerHTML = '<br>';
     this.editor.nativeElement.appendChild(img);

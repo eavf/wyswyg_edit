@@ -64,7 +64,9 @@ Po kliknutí na obrázok v editore sa zobrazí floating panel:
 ### CSS architektúra — dôležité
 
 - **`styles.css` (globálny)** obsahuje `.editor img` a `.img-*` triedy — component CSS nefunguje na dynamicky vložený obsah cez contenteditable (Angular `_ngcontent` scoping)
-- **`.editor` div** má `width:100%; max-width:100vw` — zabraňuje nafúknutiu pri veľkých obrázkoch
+- **`:host { display: block }`** na oboch komponentoch — Web Components majú defaultne `display: inline`, čo spôsobuje nafúknutie šírky v modálnych oknách
+- **`.editor`** má `white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word` — zabraňuje horizontálnemu roztiahnutiu na dlhých riadkoch
+- **`pre`** má `max-width: 100%; white-space: pre-wrap` — rovnaká ochrana pre code bloky
 - **Preview** používa CSS triedy (inline štýly sú stripované Angular sanitizerom), preto musia byť hodnoty v `styles.css` synchronizované s hodnotami v `applyImageStyles()`
 
 ### Submit — integrácia s backendom
