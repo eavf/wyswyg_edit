@@ -15,4 +15,13 @@ export class PreviewComponent implements OnChanges {
   backToEditor() {
     this.closePreview.emit();
   }
+
+  onPreviewClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const anchor = target.closest('a');
+    if (anchor) {
+      event.preventDefault();
+      window.open(anchor.href, '_blank', 'noopener,noreferrer');
+    }
+  }
 }

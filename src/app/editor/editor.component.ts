@@ -47,6 +47,11 @@ export class EditorComponent {
   imageRadiusPx: number = 0;
   imageToolbarPos: { [key: string]: string } = {};
 
+  showLinkDialog = false;
+  linkUrl = '';
+  linkTarget = '_blank';
+  private editingLink: HTMLAnchorElement | null = null;
+
   private savedRange: Range | null = null;
 
   constructor(
@@ -224,7 +229,7 @@ export class EditorComponent {
   }
 
   insertLink() {
-    this.restoreSelection();
+    this.saveSelection();
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
 
@@ -234,36 +239,64 @@ export class EditorComponent {
       : range.commonAncestorContainer as HTMLElement)?.closest('a');
 
     if (existing && this.editor.nativeElement.contains(existing)) {
-      const newUrl = prompt('Upraviť URL odkazu:', existing.getAttribute('href') || '');
-      if (newUrl === null) return;
-      if (newUrl.trim() === '') {
-        const parent = existing.parentNode!;
-        const frag = document.createDocumentFragment();
-        while (existing.firstChild) frag.appendChild(existing.firstChild);
-        parent.replaceChild(frag, existing);
-      } else {
-        existing.setAttribute('href', newUrl.trim());
-      }
+      this.editingLink = existing as HTMLAnchorElement;
+      this.linkUrl = existing.getAttribute('href') || '';
+      this.linkTarget = existing.getAttribute('target') || '_blank';
     } else {
-      const url = prompt('Zadajte URL odkazu:');
-      if (!url || url.trim() === '') return;
-      const anchor = document.createElement('a');
-      anchor.href = url.trim();
-      anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer';
-      if (range.collapsed) {
-        anchor.textContent = url.trim();
-        range.insertNode(anchor);
+      this.editingLink = null;
+      this.linkUrl = '';
+      this.linkTarget = '_blank';
+    }
+    this.showLinkDialog = true;
+    this.cdr.detectChanges();
+  }
+
+  confirmLink() {
+    const url = this.linkUrl.trim();
+    this.showLinkDialog = false;
+
+    if (this.editingLink) {
+      if (url === '') {
+        const parent = this.editingLink.parentNode!;
+        const frag = document.createDocumentFragment();
+        while (this.editingLink.firstChild) frag.appendChild(this.editingLink.firstChild);
+        parent.replaceChild(frag, this.editingLink);
       } else {
-        try {
-          range.surroundContents(anchor);
-        } catch {
-          anchor.appendChild(range.extractContents());
-          range.insertNode(anchor);
-        }
+        this.editingLink.setAttribute('href', url);
+        this.editingLink.setAttribute('target', this.linkTarget);
+        this.editingLink.setAttribute('rel', this.linkTarget === '_blank' ? 'noopener noreferrer' : '');
+      }
+      this.editingLink = null;
+      this.updateContent();
+      return;
+    }
+
+    if (!url) return;
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = this.linkTarget;
+    anchor.rel = this.linkTarget === '_blank' ? 'noopener noreferrer' : '';
+    if (range.collapsed) {
+      anchor.textContent = url;
+      range.insertNode(anchor);
+    } else {
+      try {
+        range.surroundContents(anchor);
+      } catch {
+        anchor.appendChild(range.extractContents());
+        range.insertNode(anchor);
       }
     }
     this.updateContent();
+  }
+
+  cancelLink() {
+    this.showLinkDialog = false;
+    this.editingLink = null;
   }
 
   format(command: string, value: string = '') {

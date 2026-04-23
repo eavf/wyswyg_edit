@@ -33,6 +33,25 @@
 >
 </div>
 
+<!-- Link Dialog -->
+<div class="link-dialog" *ngIf="showLinkDialog">
+    <div class="imt-row">
+        <span class="imt-label">URL odkazu</span>
+        <input type="url" [(ngModel)]="linkUrl" placeholder="https://" class="link-url-input">
+    </div>
+    <div class="imt-row">
+        <span class="imt-label">Otvoriť v</span>
+        <div class="float-btns">
+            <button [class.active]="linkTarget === '_blank'" (click)="linkTarget = '_blank'">Novom tabe</button>
+            <button [class.active]="linkTarget === '_self'"  (click)="linkTarget = '_self'">Rovnakej stránke</button>
+        </div>
+    </div>
+    <div class="imt-row">
+        <button class="imt-close" style="flex:1; margin-right:4px" (click)="confirmLink()">✓ Potvrdiť</button>
+        <button class="imt-close" style="flex:1" (click)="cancelLink()">✕ Zrušiť</button>
+    </div>
+</div>
+
 <!-- Image Styling Toolbar -->
 <div class="image-toolbar" *ngIf="selectedImage" [ngStyle]="imageToolbarPos">
 

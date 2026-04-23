@@ -42,6 +42,24 @@
 
 /* .editor img styles are in global styles.css — component CSS doesn't reach contenteditable children */
 
+/* Link Dialog */
+.link-dialog {
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  margin-bottom: 6px;
+}
+
+.link-url-input {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
 /* Image Toolbar */
 .image-toolbar {
   position: fixed;
