@@ -1,5 +1,10 @@
 /* You can add global styles to this file, and also import other style files */
 
+/* List styles — global, override website CSS resets */
+.editor ul, .preview-content ul { list-style: disc !important; padding-left: 1.5em !important; margin: 0.5em 0 !important; }
+.editor ol, .preview-content ol { list-style: decimal !important; padding-left: 1.5em !important; margin: 0.5em 0 !important; }
+.editor li, .preview-content li { display: list-item !important; }
+
 /* Styles for images inside contenteditable — must be global (no _ngcontent scoping) */
 .editor img {
   max-width: 100% !important;

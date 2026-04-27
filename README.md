@@ -36,7 +36,8 @@ Editor nepoužíva deprecated `document.execCommand`. Implementované metódy:
 | `setBlockFormat(tag)` | Zmení blokový element (p, h1, h2) pod kurzorom |
 | `insertUnorderedList()` | Vytvorí `<ul><li>` zo selektovaného textu |
 | `removeAllFormatting()` | Nahradí výber čistým textom |
-| `insertLink()` | Vloží `<a href>` okolo výberu; ak je kurzor v odkaze, ponúkne úpravu alebo zmazanie |
+| `insertLink()` | Otvorí floating link panel s URL inputom a výberom targetu (nový tab / rovnaká stránka) |
+| `confirmLink()` / `cancelLink()` | Potvrdenie alebo zrušenie link dialógu |
 | `saveSelection()` / `restoreSelection()` | Zachová výber keď toolbar ukradne focus |
 | `insertImgAtRange(img, range)` | Vloží obrázok na pozíciu kurzora — rozdelí paragraph |
 

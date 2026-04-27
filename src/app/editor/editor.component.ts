@@ -68,6 +68,19 @@ export class EditorComponent {
   }
 
   ngAfterViewInit() {
+    if (!document.getElementById('vovo-editor-styles')) {
+      const style = document.createElement('style');
+      style.id = 'vovo-editor-styles';
+      style.textContent = [
+        '.editor ul,.preview-content ul{list-style:disc outside !important;list-style-type:disc !important;padding-left:1.5em !important;margin:.5em 0 !important}',
+        '.editor ol,.preview-content ol{list-style:decimal outside !important;list-style-type:decimal !important;padding-left:1.5em !important;margin:.5em 0 !important}',
+        '.editor li,.preview-content li{display:list-item !important;list-style-type:inherit !important}',
+        '.editor ul li::marker,.preview-content ul li::marker{content:"• " !important}',
+        '.editor ol li::marker,.preview-content ol li::marker{content:counter(list-item)". " !important}',
+      ].join('');
+      document.head.appendChild(style);
+    }
+
     this.contentService.onReset.subscribe(content => {
       if (content === null) return;
       this.content = content;
@@ -167,23 +180,56 @@ export class EditorComponent {
     if (!selection || !selection.rangeCount) return;
 
     const range = selection.getRangeAt(0);
+
+    // Nájdi parent blok (p, h1...) — ul nesmie byť vnorené doň
+    let node: Node | null = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    const blockTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
+    let block: HTMLElement | null = node as HTMLElement;
+    while (block && block !== this.editor.nativeElement && !blockTags.includes(block.tagName?.toUpperCase() ?? '')) {
+      block = block.parentElement;
+    }
+    if (block === this.editor.nativeElement) block = null;
+
     const ul = document.createElement('ul');
-    const selectedText = range.toString();
-    const lines = selectedText ? selectedText.split('\n') : [''];
-    lines.forEach(line => {
+
+    if (range.collapsed) {
+      // Bez selekcie: konvertuj aktuálny blok na list item
       const li = document.createElement('li');
-      li.textContent = line || '';
+      li.innerHTML = block ? (block.innerHTML || '<br>') : '<br>';
       ul.appendChild(li);
-    });
+      if (block) {
+        block.parentNode!.replaceChild(ul, block);
+      } else {
+        range.insertNode(ul);
+      }
+    } else {
+      // So selekciou: každý riadok = jeden li
+      const lines = range.toString().split('\n').map(l => l.trim()).filter(l => l !== '');
+      if (lines.length === 0) lines.push('');
+      lines.forEach(line => {
+        const li = document.createElement('li');
+        li.textContent = line;
+        ul.appendChild(li);
+      });
+      range.deleteContents();
+      // Vložiť za blok, nie dovnútra
+      if (block) {
+        block.parentNode!.insertBefore(ul, block.nextSibling);
+      } else {
+        range.insertNode(ul);
+      }
+    }
 
-    range.deleteContents();
-    range.insertNode(ul);
-
-    const newRange = document.createRange();
-    newRange.setStartAfter(ul);
-    newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
+    // Kurzor na koniec posledného li
+    const lastLi = ul.lastElementChild as HTMLElement;
+    if (lastLi) {
+      const newRange = document.createRange();
+      newRange.selectNodeContents(lastLi);
+      newRange.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
     this.updateContent();
   }
 
@@ -438,6 +484,29 @@ export class EditorComponent {
     this.editor.nativeElement.appendChild(img);
     this.editor.nativeElement.appendChild(p);
     this.updateContent();
+  }
+
+  onPaste(event: ClipboardEvent) {
+    const html = event.clipboardData?.getData('text/html');
+    if (!html) return;
+
+    event.preventDefault();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Odstráň AI data-* atribúty
+    doc.body.querySelectorAll('*').forEach(el => {
+      ['data-start', 'data-end', 'data-section-id'].forEach(attr => el.removeAttribute(attr));
+    });
+
+    // Vytiahni <ul>/<ol> von z <p>
+    doc.body.querySelectorAll('p > ul, p > ol').forEach(list => {
+      const parent = list.parentElement!;
+      parent.insertAdjacentElement('afterend', list);
+      if (!parent.textContent?.trim()) parent.remove();
+    });
+
+    this.insertHtmlAtCaret(doc.body.innerHTML);
   }
 
   uploadImage(event: Event) {
