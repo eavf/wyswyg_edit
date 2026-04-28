@@ -131,12 +131,18 @@
   background: #d0d0d0;
 }
 
-pre {
+
+.html-source {
+  width: 100%;
+  min-height: 200px;
+  height: 300px;
+  font-family: monospace;
+  font-size: 12px;
   background: #f9f9f9;
   padding: 10px;
   border: 1px solid #ccc;
-  max-width: 100%;
-  overflow-x: auto;
-  white-space: pre-wrap;
   box-sizing: border-box;
+  white-space: pre-wrap;
+  resize: vertical;
 }
+

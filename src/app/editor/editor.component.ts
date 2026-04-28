@@ -30,8 +30,6 @@ import { EditorContentService } from '../editor-content.service';
 export class EditorComponent {
   @Input() apiUrl: string = '';
   content: string = '';
-  isPreviewMode: boolean = false;
-
   @ViewChild('editor', { static: false }) editor!: ElementRef<HTMLDivElement>;
   @ViewChild('imageInput', { static: false }) imageInput!: ElementRef<HTMLInputElement>;
   @Output() goToPreview = new EventEmitter<void>();
@@ -51,6 +49,9 @@ export class EditorComponent {
   linkUrl = '';
   linkTarget = '_blank';
   private editingLink: HTMLAnchorElement | null = null;
+
+  showValidation = false;
+  validationIssues: string[] = [];
 
   private savedRange: Range | null = null;
 
@@ -180,52 +181,58 @@ export class EditorComponent {
     if (!selection || !selection.rangeCount) return;
 
     const range = selection.getRangeAt(0);
-
-    // Nájdi parent blok (p, h1...) — ul nesmie byť vnorené doň
-    let node: Node | null = range.startContainer;
-    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-    const blockTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
-    let block: HTMLElement | null = node as HTMLElement;
-    while (block && block !== this.editor.nativeElement && !blockTags.includes(block.tagName?.toUpperCase() ?? '')) {
-      block = block.parentElement;
-    }
-    if (block === this.editor.nativeElement) block = null;
-
+    const block = this.findParentBlock(range.startContainer);
     const ul = document.createElement('ul');
 
-    if (range.collapsed) {
-      // Bez selekcie: konvertuj aktuálny blok na list item
-      const li = document.createElement('li');
-      li.innerHTML = block ? (block.innerHTML || '<br>') : '<br>';
-      ul.appendChild(li);
-      if (block) {
-        block.parentNode!.replaceChild(ul, block);
-      } else {
-        range.insertNode(ul);
-      }
+    // Vždy konvertuj aktuálny blok — so selekciou aj bez
+    const li = document.createElement('li');
+    li.innerHTML = block ? (block.innerHTML || '<br>') : '<br>';
+    ul.appendChild(li);
+    if (block) {
+      block.parentNode!.replaceChild(ul, block);
     } else {
-      // So selekciou: každý riadok = jeden li
-      const lines = range.toString().split('\n').map(l => l.trim()).filter(l => l !== '');
-      if (lines.length === 0) lines.push('');
-      lines.forEach(line => {
-        const li = document.createElement('li');
-        li.textContent = line;
-        ul.appendChild(li);
-      });
       range.deleteContents();
-      // Vložiť za blok, nie dovnútra
-      if (block) {
-        block.parentNode!.insertBefore(ul, block.nextSibling);
-      } else {
-        range.insertNode(ul);
-      }
+      range.insertNode(ul);
     }
 
-    // Kurzor na koniec posledného li
-    const lastLi = ul.lastElementChild as HTMLElement;
-    if (lastLi) {
+    const newRange = document.createRange();
+    newRange.selectNodeContents(li);
+    newRange.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    this.updateContent();
+  }
+
+  private removeAllFormatting() {
+    this.restoreSelection();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    if (!selection.isCollapsed) {
+      // So selekciou: nahraď čistým textom
+      const range = selection.getRangeAt(0);
+      const text = document.createTextNode(range.toString());
+      range.deleteContents();
+      range.insertNode(text);
       const newRange = document.createRange();
-      newRange.selectNodeContents(lastLi);
+      newRange.selectNode(text);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    } else {
+      // Bez selekcie: konvertuj aktuálny blok na čistý <p>
+      const range = selection.getRangeAt(0);
+      const block = this.findParentBlock(range.startContainer, true);
+      if (!block) return;
+      const p = document.createElement('p');
+      p.textContent = block.textContent || '';
+      if (block.tagName === 'LI') {
+        const list = block.parentElement!;
+        list.parentNode?.replaceChild(p, list);
+      } else {
+        block.parentNode?.replaceChild(p, block);
+      }
+      const newRange = document.createRange();
+      newRange.selectNodeContents(p);
       newRange.collapse(false);
       selection.removeAllRanges();
       selection.addRange(newRange);
@@ -233,21 +240,15 @@ export class EditorComponent {
     this.updateContent();
   }
 
-  private removeAllFormatting() {
-    this.restoreSelection();
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
-
-    const range = selection.getRangeAt(0);
-    const text = document.createTextNode(range.toString());
-    range.deleteContents();
-    range.insertNode(text);
-
-    const newRange = document.createRange();
-    newRange.selectNode(text);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-    this.updateContent();
+  private findParentBlock(node: Node | null, includeLi = false): HTMLElement | null {
+    const tags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', ...(includeLi ? ['LI'] : [])];
+    let el: HTMLElement | null = node?.nodeType === Node.TEXT_NODE
+      ? (node as Text).parentElement
+      : node as HTMLElement;
+    while (el && el !== this.editor.nativeElement && !tags.includes(el.tagName?.toUpperCase() ?? '')) {
+      el = el.parentElement;
+    }
+    return el && el !== this.editor.nativeElement ? el : null;
   }
 
   private insertHtmlAtCaret(html: string) {
@@ -486,6 +487,52 @@ export class EditorComponent {
     this.updateContent();
   }
 
+  validateHtml() {
+    const issues: string[] = [];
+    const el = this.editor.nativeElement;
+
+    // Prázdne elementy
+    el.querySelectorAll('p,div,h1,h2,h3,h4,h5,h6,span,b,i,u,li,a').forEach(node => {
+      if (!node.textContent?.trim() && node.children.length === 0) {
+        issues.push(`Prázdny element <${node.tagName.toLowerCase()}>`);
+      }
+    });
+
+    // Osamotené <li> mimo zoznamu
+    el.querySelectorAll('li').forEach(li => {
+      if (!['UL','OL'].includes(li.parentElement?.tagName ?? '')) {
+        issues.push('Osamotený <li> mimo <ul>/<ol>');
+      }
+    });
+
+    // Nezatvorené tagy — hľadaj otváracie tagy bez zodpovedajúceho zatváracieho
+    const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+    const openTags = (this.content.match(/<([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g) ?? [])
+      .map(t => t.match(/<([a-zA-Z][a-zA-Z0-9]*)/)?.[1].toLowerCase() ?? '')
+      .filter(t => t && !voidTags.has(t));
+    const closeTags = (this.content.match(/<\/([a-zA-Z][a-zA-Z0-9]*)>/g) ?? [])
+      .map(t => t.match(/<\/([a-zA-Z][a-zA-Z0-9]*)>/)?.[1].toLowerCase() ?? '');
+    const openCount: Record<string, number> = {};
+    openTags.forEach(t => openCount[t] = (openCount[t] ?? 0) + 1);
+    closeTags.forEach(t => openCount[t] = (openCount[t] ?? 1) - 1);
+    Object.entries(openCount).forEach(([tag, diff]) => {
+      if (diff > 0) issues.push(`Nezatvorený tag <${tag}> (${diff}×)`);
+    });
+
+    this.validationIssues = [...new Set(issues)];
+    this.showValidation = true;
+    this.cdr.detectChanges();
+  }
+
+
+
+  onHtmlEdit(event: Event) {
+    const html = (event.target as HTMLTextAreaElement).value;
+    this.content = html;
+    this.editor.nativeElement.innerHTML = html;
+    this.contentService.setContent(html);
+  }
+
   onPaste(event: ClipboardEvent) {
     const html = event.clipboardData?.getData('text/html');
     if (!html) return;
@@ -494,9 +541,17 @@ export class EditorComponent {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // Odstráň AI data-* atribúty
+    const keepAttrs: Record<string, string[]> = {
+      A:   ['href', 'target', 'rel'],
+      IMG: ['src', 'alt', 'class', 'style'],
+    };
+
+    // Odstráň všetky atribúty (triedy, štýly, data-*...), zachovaj len nevyhnutné
     doc.body.querySelectorAll('*').forEach(el => {
-      ['data-start', 'data-end', 'data-section-id'].forEach(attr => el.removeAttribute(attr));
+      const allowed = keepAttrs[el.tagName] ?? [];
+      Array.from(el.attributes).forEach(attr => {
+        if (!allowed.includes(attr.name)) el.removeAttribute(attr.name);
+      });
     });
 
     // Vytiahni <ul>/<ol> von z <p>
@@ -506,28 +561,17 @@ export class EditorComponent {
       if (!parent.textContent?.trim()) parent.remove();
     });
 
+    // Odstráň <script> a <style> elementy
+    doc.body.querySelectorAll('script, style').forEach(el => el.remove());
+
+    // Odstráň prázdne párové elementy (napr. <p></p>, <div></div>)
+    doc.body.querySelectorAll('*:not(br):not(img):not(input):not(hr)').forEach(el => {
+      if (!el.textContent?.trim() && el.children.length === 0) el.remove();
+    });
+
     this.insertHtmlAtCaret(doc.body.innerHTML);
   }
 
-  uploadImage(event: Event) {
-    const fileInput = event.target as HTMLInputElement;
-    if (fileInput.files && fileInput.files[0]) {
-      const file = fileInput.files[0];
-      const formData = new FormData();
-      formData.append('image', file);
-
-      this.http.post<{ imageUrl: string }>('https://vovo.eavf.eu/upload/image', formData).subscribe({
-        next: (response) => {
-          const imgTag = `<img src="${response.imageUrl}" style="width: 75px; height: auto; display: inline-block; margin: 10px 0;" alt="Uploaded Image">`;
-          this.insertHtmlAtCaret(imgTag);
-        },
-        error: (error) => {
-          alert('Error uploading image.');
-          console.error('Image upload error:', error);
-        }
-      });
-    }
-  }
 
   onEditorClick(event: MouseEvent) {
     const target = event.target as HTMLElement;

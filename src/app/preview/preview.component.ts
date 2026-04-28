@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnChanges } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'app-preview',
@@ -6,11 +6,9 @@ import { Component, EventEmitter, Input, Output, OnChanges } from '@angular/core
   templateUrl: './preview.component.html',
   styleUrls: ['./preview.component.css']
 })
-export class PreviewComponent implements OnChanges {
+export class PreviewComponent {
   @Input() content: string = '';
   @Output() closePreview = new EventEmitter<void>();
-
-  ngOnChanges() {}
 
   backToEditor() {
     this.closePreview.emit();

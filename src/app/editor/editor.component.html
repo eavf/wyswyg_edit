@@ -18,6 +18,7 @@
     />
 
     <!-- Submit Button -->
+    <button (click)="validateHtml()">🔍 Check</button>
     <button (click)="submitContent()" class="submit-btn">📤 Submit</button>
     <button (click)="triggerPreview()" class="preview-btn">👁️ Preview</button>
 
@@ -32,6 +33,20 @@
     (blur)="saveSelection()"
     (paste)="onPaste($event)"
 >
+</div>
+
+<!-- Validation Panel -->
+<div class="link-dialog" *ngIf="showValidation">
+    <div class="imt-row" style="justify-content:space-between">
+        <b style="font-size:13px">HTML Check</b>
+        <button class="imt-close" style="width:auto;margin:0;padding:2px 8px" (click)="showValidation=false">✕</button>
+    </div>
+    <div *ngIf="validationIssues.length === 0" style="font-size:12px;color:#2a7a2a;padding:4px 0">
+        ✓ Žiadne problémy
+    </div>
+    <ul *ngIf="validationIssues.length > 0" style="font-size:12px;margin:4px 0;padding-left:1.2em">
+        <li *ngFor="let issue of validationIssues" style="margin-bottom:3px">{{ issue }}</li>
+    </ul>
 </div>
 
 <!-- Link Dialog -->
@@ -84,4 +99,4 @@
 </div>
 
 <h3>Generated HTML:</h3>
-<pre>{{ content }}</pre>
+<textarea class="html-source" #htmlArea [(ngModel)]="content" (input)="onHtmlEdit($event)"></textarea>
