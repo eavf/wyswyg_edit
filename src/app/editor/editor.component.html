@@ -41,12 +41,18 @@
         <b style="font-size:13px">HTML Check</b>
         <button class="imt-close" style="width:auto;margin:0;padding:2px 8px" (click)="showValidation=false">✕</button>
     </div>
-    <div *ngIf="validationIssues.length === 0" style="font-size:12px;color:#2a7a2a;padding:4px 0">
+    <div *ngIf="validationItems.length === 0 && validationMessages.length === 0" style="font-size:12px;color:#2a7a2a;padding:4px 0">
         ✓ Žiadne problémy
     </div>
-    <ul *ngIf="validationIssues.length > 0" style="font-size:12px;margin:4px 0;padding-left:1.2em">
-        <li *ngFor="let issue of validationIssues" style="margin-bottom:3px">{{ issue }}</li>
-    </ul>
+    <div *ngIf="validationItems.length > 0 || validationMessages.length > 0" style="font-size:12px;margin:4px 0">
+        <div *ngFor="let item of validationItems" (click)="selectIssueInTextarea(item.search, item.occurrence)"
+             style="padding:3px 6px;margin-bottom:3px;cursor:pointer;border-radius:3px;background:#fff8e1;border:1px solid #ffe082">
+            🔴 {{ item.label }} <small style="color:#888">(klikni pre výber)</small>
+        </div>
+        <div *ngFor="let msg of validationMessages" style="padding:3px 6px;margin-bottom:3px;border-radius:3px;background:#fff3e0;border:1px solid #ffcc80;font-size:11px">
+            ⚠️ {{ msg }}
+        </div>
+    </div>
 </div>
 
 <!-- Link Dialog -->

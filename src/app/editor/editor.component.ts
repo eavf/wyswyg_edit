@@ -32,6 +32,7 @@ export class EditorComponent {
   content: string = '';
   @ViewChild('editor', { static: false }) editor!: ElementRef<HTMLDivElement>;
   @ViewChild('imageInput', { static: false }) imageInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('htmlArea', { static: false }) htmlArea?: ElementRef<HTMLTextAreaElement>;
   @Output() goToPreview = new EventEmitter<void>();
 
   selectedImage: HTMLImageElement | null = null;
@@ -52,6 +53,9 @@ export class EditorComponent {
 
   showValidation = false;
   validationIssues: string[] = [];
+  validationHighlightHtml = '';
+  validationItems: { label: string; search: string; occurrence: number }[] = [];
+  validationMessages: string[] = [];
 
   private savedRange: Range | null = null;
 
@@ -489,12 +493,14 @@ export class EditorComponent {
 
   validateHtml() {
     const issues: string[] = [];
+    const highlights: string[] = [];
     const el = this.editor.nativeElement;
 
     // Prázdne elementy
     el.querySelectorAll('p,div,h1,h2,h3,h4,h5,h6,span,b,i,u,li,a').forEach(node => {
       if (!node.textContent?.trim() && node.children.length === 0) {
         issues.push(`Prázdny element <${node.tagName.toLowerCase()}>`);
+        highlights.push((node as HTMLElement).outerHTML);
       }
     });
 
@@ -502,26 +508,65 @@ export class EditorComponent {
     el.querySelectorAll('li').forEach(li => {
       if (!['UL','OL'].includes(li.parentElement?.tagName ?? '')) {
         issues.push('Osamotený <li> mimo <ul>/<ol>');
+        highlights.push(li.outerHTML);
       }
     });
 
-    // Nezatvorené tagy — hľadaj otváracie tagy bez zodpovedajúceho zatváracieho
-    const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-    const openTags = (this.content.match(/<([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g) ?? [])
-      .map(t => t.match(/<([a-zA-Z][a-zA-Z0-9]*)/)?.[1].toLowerCase() ?? '')
-      .filter(t => t && !voidTags.has(t));
-    const closeTags = (this.content.match(/<\/([a-zA-Z][a-zA-Z0-9]*)>/g) ?? [])
-      .map(t => t.match(/<\/([a-zA-Z][a-zA-Z0-9]*)>/)?.[1].toLowerCase() ?? '');
-    const openCount: Record<string, number> = {};
-    openTags.forEach(t => openCount[t] = (openCount[t] ?? 0) + 1);
-    closeTags.forEach(t => openCount[t] = (openCount[t] ?? 1) - 1);
-    Object.entries(openCount).forEach(([tag, diff]) => {
-      if (diff > 0) issues.push(`Nezatvorený tag <${tag}> (${diff}×)`);
+
+    // Každý výskyt ako samostatná položka (aj opakujúce sa)
+    const occurrenceCount: Record<string, number> = {};
+    this.validationItems = highlights.map((h, i) => {
+      occurrenceCount[h] = (occurrenceCount[h] ?? 0) + 1;
+      return { label: issues[i], search: h, occurrence: occurrenceCount[h] };
     });
 
-    this.validationIssues = [...new Set(issues)];
+    // Nezatvorené tagy — iba informácia, nedá sa spoľahlivo lokalizovať
+    this.validationMessages = [];
+    const unclosed = this.findUnclosedTags(this.content);
+    const unclosedGroups: Record<string, number> = {};
+    unclosed.forEach(u => unclosedGroups[u.tag] = (unclosedGroups[u.tag] ?? 0) + 1);
+    Object.entries(unclosedGroups).forEach(([tag, count]) => {
+      this.validationMessages.push(`Tag <${tag}> nemá pár${count > 1 ? ` (${count}×)` : ''}`);
+    });
+
+    this.validationIssues = this.validationItems.map(i => i.label);
     this.showValidation = true;
     this.cdr.detectChanges();
+  }
+
+  private findUnclosedTags(html: string): { tag: string; exactHtml: string }[] {
+    const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+    const stack: { tag: string; exactHtml: string }[] = [];
+    const regex = /<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g;
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+      const full = match[0];
+      const tag = match[1].toLowerCase();
+      if (voidTags.has(tag) || full.endsWith('/>')) continue;
+      if (full.startsWith('</')) {
+        for (let i = stack.length - 1; i >= 0; i--) {
+          if (stack[i].tag === tag) { stack.splice(i, 1); break; }
+        }
+      } else {
+        stack.push({ tag, exactHtml: full });
+      }
+    }
+    return stack;
+  }
+
+  selectIssueInTextarea(search: string, occurrence: number) {
+    const ta = this.htmlArea?.nativeElement;
+    if (!ta) return;
+    let idx = -1;
+    let searchFrom = 0;
+    for (let i = 0; i < occurrence; i++) {
+      idx = ta.value.indexOf(search, searchFrom);
+      if (idx < 0) return;
+      searchFrom = idx + 1;
+    }
+    ta.focus();
+    ta.setSelectionRange(idx, idx + search.length);
+    ta.scrollTop = (idx / Math.max(1, ta.value.length)) * ta.scrollHeight;
   }
 
 
@@ -531,6 +576,7 @@ export class EditorComponent {
     this.content = html;
     this.editor.nativeElement.innerHTML = html;
     this.contentService.setContent(html);
+    if (this.showValidation) this.validateHtml();
   }
 
   onPaste(event: ClipboardEvent) {
