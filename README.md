@@ -153,3 +153,16 @@ ng test
 ```
 
 Unit testy bežia v Karma + Jasmine. Aktuálne sú vygenerované základné spec súbory.
+
+---
+
+## Changelog
+
+### 2026-04-18
+- **Bezpečnosť:** Odstránený `bypassSecurityTrustHtml` v `PreviewComponent` — Angular štandardná sanitizácia zachováva formátovacie tagy a blokuje skripty
+- **Refactor:** `document.execCommand` (deprecated) nahradený moderným Selection/Range API — `toggleInlineStyle`, `setBlockFormat`, `insertUnorderedList`, `removeAllFormatting`, `insertHtmlAtCaret`
+- **Oprava:** Odstránený hardcoded fallback API endpoint, pridané `saveSelection`/`restoreSelection` pre zachovanie výberu pri kliknutí na toolbar
+- **Poriadok:** Zmazaný zábudnutý súbor `app.component copy.html`
+- **TypeScript:** Doplnený `rootDir: ./src` do `tsconfig.json`
+- **Dokumentácia:** Prepísaný `README.md`, vytvorený `OPTIMIZATIONS.md`
+- **Image upload:** `uploadImage()` používa produkčný endpoint `https://vovo.eavf.eu/upload/image` s `FormData`
