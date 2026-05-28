@@ -1,11 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EditorComponent } from '../editor/editor.component';
 import { PreviewComponent } from '../preview/preview.component';
 import { EditorContentService } from '../editor-content.service';
 
 @Component({
-  selector: 'app-editor-preview-wrapper',
+  selector: 'vovo-editor',
   standalone: true,
   imports: [CommonModule, EditorComponent, PreviewComponent],
   templateUrl: './editor-preview-wrapper.component.html',
@@ -13,6 +13,13 @@ import { EditorContentService } from '../editor-content.service';
   providers: [EditorContentService]
 })
 export class EditorPreviewWrapperComponent {
+  @Input() apiUrl: string = '';
+  @Input() set initialContent(val: string) {
+    if (val !== undefined) {
+      this.isPreviewMode = false;
+      this.contentService.reset(val);
+    }
+  }
   isPreviewMode = false;
   content: string = '';
 

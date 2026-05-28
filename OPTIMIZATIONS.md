@@ -35,22 +35,9 @@ API musí vrátiť `{ imageUrl: string }` s finálnou URL.
 
 ---
 
-### 3. `HttpClientModule` → `provideHttpClient()`
+### ~~3. `HttpClientModule` → `provideHttpClient()`~~ ✅ Hotové
 
-**Súbor:** `src/app/editor/editor.component.ts`
-
-`HttpClientModule` v standalone komponente je deprecated od Angular 15. Správny spôsob:
-
-```typescript
-// app.config.ts
-import { provideHttpClient } from '@angular/common/http';
-
-export const appConfig: ApplicationConfig = {
-  providers: [provideHttpClient()]
-};
-```
-
-A z `editor.component.ts` odstrániť `HttpClientModule` z `imports`.
+`provideHttpClient()` pridaný do `app.config.ts`.
 
 ---
 

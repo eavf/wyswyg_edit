@@ -25,17 +25,3 @@
   /* Ensure inline width styles are respected */
   width: auto !important;   /* Allow inline styles to control the width */
 }
-
-.back-btn {
-  padding: 10px 20px;
-  background-color: #007BFF;
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  border-radius: 4px;
-}
-
-.back-btn:hover {
-  background-color: #0056b3;
-}

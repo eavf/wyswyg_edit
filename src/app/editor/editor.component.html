@@ -7,16 +7,18 @@
     <button (click)="format('formatBlock', 'h2')">H2</button>
     <button (click)="format('formatBlock', 'p')">P</button>
     <button (click)="clearFormatting()">Clear</button>
+    <button (click)="insertLink()">🔗 Link</button>
     <button (click)="triggerImageUpload()">📁 Upload Image</button>
     <input
         type="file"
         accept="image/*"
         #imageInput
-        (change)="uploadImage($event)"
+        (change)="uploadImageEncoded($event)"
         style="display: none;"
     />
 
     <!-- Submit Button -->
+    <button (click)="validateHtml()">🔍 Check</button>
     <button (click)="submitContent()" class="submit-btn">📤 Submit</button>
     <button (click)="triggerPreview()" class="preview-btn">👁️ Preview</button>
 
@@ -29,36 +31,78 @@
     (input)="updateContent()"
     (click)="onEditorClick($event)"
     (blur)="saveSelection()"
+    (paste)="onPaste($event)"
 >
-    <!-- Placeholder text for testing -->
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus vehicula.</p>
 </div>
 
-<!-- Floating Image Styling Toolbar -->
-<div class="image-toolbar" *ngIf="selectedImage">
-    <label>Width:
-        <input type="text" [(ngModel)]="imageStyles.width" (input)="applyImageStyles()" placeholder="e.g., 75px or 50%">
-    </label>
+<!-- Validation Panel -->
+<div class="link-dialog" *ngIf="showValidation">
+    <div class="imt-row" style="justify-content:space-between">
+        <b style="font-size:13px">HTML Check</b>
+        <button class="imt-close" style="width:auto;margin:0;padding:2px 8px" (click)="showValidation=false">✕</button>
+    </div>
+    <div *ngIf="validationItems.length === 0 && validationMessages.length === 0" style="font-size:12px;color:#2a7a2a;padding:4px 0">
+        ✓ Žiadne problémy
+    </div>
+    <div *ngIf="validationItems.length > 0 || validationMessages.length > 0" style="font-size:12px;margin:4px 0">
+        <div *ngFor="let item of validationItems" (click)="selectIssueInTextarea(item.search, item.occurrence)"
+             style="padding:3px 6px;margin-bottom:3px;cursor:pointer;border-radius:3px;background:#fff8e1;border:1px solid #ffe082">
+            🔴 {{ item.label }} <small style="color:#888">(klikni pre výber)</small>
+        </div>
+        <div *ngFor="let msg of validationMessages" style="padding:3px 6px;margin-bottom:3px;border-radius:3px;background:#fff3e0;border:1px solid #ffcc80;font-size:11px">
+            ⚠️ {{ msg }}
+        </div>
+    </div>
+</div>
 
-    <label>Height:
-        <input type="text" [(ngModel)]="imageStyles.height" (input)="applyImageStyles()" placeholder="e.g., auto or 200px">
-    </label>
+<!-- Link Dialog -->
+<div class="link-dialog" *ngIf="showLinkDialog">
+    <div class="imt-row">
+        <span class="imt-label">URL odkazu</span>
+        <input type="url" [(ngModel)]="linkUrl" placeholder="https://" class="link-url-input">
+    </div>
+    <div class="imt-row">
+        <span class="imt-label">Otvoriť v</span>
+        <div class="float-btns">
+            <button [class.active]="linkTarget === '_blank'" (click)="linkTarget = '_blank'">Novom tabe</button>
+            <button [class.active]="linkTarget === '_self'"  (click)="linkTarget = '_self'">Rovnakej stránke</button>
+        </div>
+    </div>
+    <div class="imt-row">
+        <button class="imt-close" style="flex:1; margin-right:4px" (click)="confirmLink()">✓ Potvrdiť</button>
+        <button class="imt-close" style="flex:1" (click)="cancelLink()">✕ Zrušiť</button>
+    </div>
+</div>
 
-    <label>Border Radius:
-        <input type="text" [(ngModel)]="imageStyles.borderRadius" (input)="applyImageStyles()" placeholder="e.g., 0px or 10px">
-    </label>
+<!-- Image Styling Toolbar -->
+<div class="image-toolbar" *ngIf="selectedImage" [ngStyle]="imageToolbarPos">
 
-    <!-- Text Wrapping Options -->
-    <label>Text Wrapping:
-        <select [(ngModel)]="imageStyles.float" (change)="applyImageStyles()">
-            <option value="none">None</option>
-            <option value="left">Left (Text Wraps Right)</option>
-            <option value="right">Right (Text Wraps Left)</option>
-        </select>
-    </label>
+    <div class="imt-row">
+        <span class="imt-label">Obtekanie</span>
+        <div class="float-btns">
+            <button [class.active]="imageStyles.float === 'none'" (click)="setFloat('none')">⬛ Blok</button>
+            <button [class.active]="imageStyles.float === 'left'" (click)="setFloat('left')">◧ Vľavo</button>
+            <button [class.active]="imageStyles.float === 'right'" (click)="setFloat('right')">◨ Vpravo</button>
+        </div>
+    </div>
 
-    <button (click)="deselectImage()">Done</button>
+    <div class="imt-row">
+        <span class="imt-label">Veľkosť</span>
+        <div class="float-btns">
+            <button [class.active]="imageSize === 'img-sm'"   (click)="setSize('img-sm')">S</button>
+            <button [class.active]="imageSize === 'img-md'"   (click)="setSize('img-md')">M</button>
+            <button [class.active]="imageSize === 'img-lg'"   (click)="setSize('img-lg')">L</button>
+            <button [class.active]="imageSize === 'img-full'" (click)="setSize('img-full')">Full</button>
+        </div>
+    </div>
+
+    <div class="imt-row">
+        <span class="imt-label">Zaoblenie: <b>{{ imageRadiusPx }}px</b></span>
+        <input type="range" min="0" max="50" step="1" [(ngModel)]="imageRadiusPx" (input)="onRadiusSlider()">
+    </div>
+
+    <button class="imt-close" (click)="deselectImage()">✕ Zavrieť</button>
 </div>
 
 <h3>Generated HTML:</h3>
-<pre>{{ content }}</pre>
+<textarea class="html-source" #htmlArea [(ngModel)]="content" (input)="onHtmlEdit($event)"></textarea>

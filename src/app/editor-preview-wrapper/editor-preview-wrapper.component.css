@@ -1,9 +1,18 @@
+:host {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 :host .edit-section-fieldset {
   border: 2px solid #ccc;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
   background-color: #f9f9f9;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 :host .edit-section-fieldset legend {
