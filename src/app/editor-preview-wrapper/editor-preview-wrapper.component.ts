@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { EditorComponent } from '../editor/editor.component';
 import { PreviewComponent } from '../preview/preview.component';
 import { EditorContentService } from '../editor-content.service';
@@ -7,7 +7,7 @@ import { EditorContentService } from '../editor-content.service';
 @Component({
   selector: 'vovo-editor',
   standalone: true,
-  imports: [CommonModule, EditorComponent, PreviewComponent],
+  imports: [EditorComponent, PreviewComponent],
   templateUrl: './editor-preview-wrapper.component.html',
   styleUrls: ['./editor-preview-wrapper.component.css'],
   providers: [EditorContentService]
