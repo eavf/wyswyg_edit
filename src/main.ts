@@ -1,21 +1,22 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { createCustomElement } from '@angular/elements';
-import { isDevMode, Component } from '@angular/core';
+import { isDevMode, Component, ChangeDetectionStrategy } from '@angular/core';
 import { AppComponent } from './app/app.component';
 import { EditorPreviewWrapperComponent } from './app/editor-preview-wrapper/editor-preview-wrapper.component';
 import { provideZoneChangeDetection } from '@angular/core';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
 
 const commonProviders = [
   provideZoneChangeDetection(),
-  provideHttpClient(withInterceptorsFromDi()),
+  provideHttpClient(withXhr(), withInterceptorsFromDi()),
   ...appConfig.providers
 ];
 
 // Minimálny prázdny komponent pre production bootstrap —
 // zabraňuje konfliktu s <vovo-editor> elementmi na stránke
-@Component({ selector: 'vovo-bootstrap-root', template: '', standalone: true })
+@Component({ selector: 'vovo-bootstrap-root', template: '', changeDetection: ChangeDetectionStrategy.Eager,
+ standalone: true })
 class VovoBootstrapRoot {}
 
 if (isDevMode()) {

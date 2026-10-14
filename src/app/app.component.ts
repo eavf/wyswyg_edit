@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 import { EditorPreviewWrapperComponent } from './editor-preview-wrapper/editor-preview-wrapper.component'; // ✅ Import Wrapper Component
 
@@ -7,6 +7,7 @@ import { EditorPreviewWrapperComponent } from './editor-preview-wrapper/editor-p
   standalone: true,
   imports: [EditorPreviewWrapperComponent], // ✅ Add it to imports
   templateUrl: './app.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./app.component.css'],
 })
 export class AppComponent {}

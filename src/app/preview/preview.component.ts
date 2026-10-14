@@ -1,9 +1,10 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-preview',
   standalone: true,
   templateUrl: './preview.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./preview.component.css']
 })
 export class PreviewComponent {

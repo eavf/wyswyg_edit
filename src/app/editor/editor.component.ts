@@ -13,7 +13,8 @@ import {
   Output,
   EventEmitter,
   ChangeDetectorRef,
-  NgZone
+  NgZone,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -25,6 +26,7 @@ import { EditorContentService } from '../editor-content.service';
   standalone: true,
   imports: [FormsModule, CommonModule],
   templateUrl: './editor.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./editor.component.css']
 })
 export class EditorComponent {

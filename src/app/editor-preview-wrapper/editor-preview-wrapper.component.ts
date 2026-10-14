@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 import { EditorComponent } from '../editor/editor.component';
 import { PreviewComponent } from '../preview/preview.component';
@@ -10,6 +10,7 @@ import { EditorContentService } from '../editor-content.service';
   imports: [EditorComponent, PreviewComponent],
   templateUrl: './editor-preview-wrapper.component.html',
   styleUrls: ['./editor-preview-wrapper.component.css'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   providers: [EditorContentService]
 })
 export class EditorPreviewWrapperComponent {
