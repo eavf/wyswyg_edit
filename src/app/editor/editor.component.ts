@@ -367,7 +367,13 @@ export class EditorComponent {
   }
 
   updateContent() {
-    this.content = this.editor.nativeElement.innerHTML;
+    // Serializuj bez editor-only triedy selected-img
+    const clone = this.editor.nativeElement.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('.selected-img').forEach(img => {
+      img.classList.remove('selected-img');
+      if (!img.classList.length) img.removeAttribute('class');
+    });
+    this.content = clone.innerHTML;
     this.contentService.setContent(this.content);
   }
 
@@ -632,7 +638,7 @@ export class EditorComponent {
       this.updateToolbarPosition();
       this.cdr.detectChanges();
     } else {
-      this.selectedImage = null;
+      this.deselectImage();
       this.cdr.detectChanges();
     }
   }
