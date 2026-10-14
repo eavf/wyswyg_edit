@@ -1,6 +1,6 @@
 # WYSIWYG Editor — Angular Web Component
 
-WYSIWYG HTML editor postavený v Angular 19, distribuovaný ako **Web Component** (`<app-editor-preview-wrapper>`). Vkladá sa do ľubovoľnej stránky vrátane non-Angular projektov.
+WYSIWYG HTML editor postavený v Angular 22, distribuovaný ako **Web Component** (`<app-editor-preview-wrapper>`). Vkladá sa do ľubovoľnej stránky vrátane non-Angular projektov.
 
 ---
 
@@ -143,8 +143,8 @@ def save_post():
 
 ### Prerekvizity
 
-- Node.js 18+
-- Angular CLI 19: `npm install -g @angular/cli`
+- Node.js 22.22+ alebo 24.15+
+- Angular CLI 22: `npm install -g @angular/cli@22`
 - json-server (pre testovanie image upload): `npm install -g json-server`
 
 ### Inštalácia
@@ -174,15 +174,17 @@ json-server --watch db.json --port 3000
 ### Build produkčného bundle
 
 ```bash
-ng build --configuration production
+npm run build
 ```
 
-Výstup: `dist/editor/`
+Spustí `ng build` (production) a potom `scripts/iife.mjs`, ktorý prebalí výstup na klasické skripty (pozri nižšie). Samotné `ng build` by vytvorilo ES moduly, ktoré sa cez `<script src>` bez `type="module"` nenačítajú.
+
+Výstup: `outputPath` v `angular.json` (aktuálne `/home/vovo/vovo.eavf.eu/public/js/vovo-editor`)
 
 ```
-dist/editor/
+vovo-editor/
 ├── main.js          # hlavný bundle (editor + Angular runtime)
-├── polyfills.js
+├── polyfills.js     # zone.js — načítať pred main.js
 └── styles.css
 ```
 
@@ -206,16 +208,17 @@ dist/editor/
   <!-- Web Component tag -->
   <app-editor-preview-wrapper></app-editor-preview-wrapper>
 
-  <!-- Bundle -->
+  <!-- Bundle (polyfills.js obsahuje zone.js, musí byť pred main.js) -->
+  <script src="path/to/dist/editor/polyfills.js"></script>
   <script src="path/to/dist/editor/main.js"></script>
 
 </body>
 </html>
 ```
 
-### Webpack namespace
+### Klasické skripty (IIFE)
 
-`extra-webpack.config.js` nastavuje `chunkLoadingGlobal: 'webpackJsonpEditor'` — zabraňuje konfliktu s inými webpack bundlami na tej istej stránke.
+Build používa štandardný Angular application builder (esbuild). `scripts/iife.mjs` zabalí `main.js` a `polyfills.js` do IIFE — žiadne globálne premenné, žiadny konflikt s inými skriptmi na stránke. Ak by build vytvoril lazy chunky (`chunk-*.js`), skript zlyhá, lebo tie sa do jedného súboru zabaliť nedajú.
 
 ### Produkčný checklist
 
@@ -245,6 +248,12 @@ Unit testy bežia v Karma + Jasmine. Aktuálne sú vygenerované základné spec
 ---
 
 ## Changelog
+
+### 2026-10-14
+- **Angular 19 → 22** (postupne cez `ng update`), Node.js 22.22+ / 24
+- **Build:** `ngx-build-plus` a `@angular-builders/custom-webpack` nahradené štandardným application builderom (esbuild) + `scripts/iife.mjs`; build sa spúšťa cez `npm run build`
+- Odstránený nepoužívaný `extra-webpack.config.js`
+- Migrácie zachovali pôvodné správanie: Zone.js change detection (`ChangeDetectionStrategy.Eager`) a `HttpClient` cez XHR (`withXhr()`)
 
 ### 2026-04-18
 - **Bezpečnosť:** Odstránený `bypassSecurityTrustHtml` v `PreviewComponent` — Angular štandardná sanitizácia zachováva formátovacie tagy a blokuje skripty
