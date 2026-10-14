@@ -1,10 +1,15 @@
 // Karma configuration file, see link for more information
 // https://karma-runner.github.io/1.0/config/configuration-file.html
 
-module.exports = async function (config) {
-  // Chromium z puppeteera, ak nie je nastavený vlastný prehliadač cez CHROME_BIN
-  process.env.CHROME_BIN ||= await require('puppeteer').executablePath();
+// Systémové Chromium/Chrome, ak nie je nastavený vlastný prehliadač cez CHROME_BIN
+process.env.CHROME_BIN ||= [
+  '/snap/bin/chromium',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/google-chrome'
+].find(bin => require('fs').existsSync(bin));
 
+module.exports = function (config) {
   config.set({
     basePath: '',
     frameworks: ['jasmine', '@angular-devkit/build-angular'],
