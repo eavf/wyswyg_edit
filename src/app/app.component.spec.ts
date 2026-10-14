@@ -14,16 +14,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have the 'wyswyg_edit' title`, () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app.title).toEqual('wyswyg_edit');
-  });
-
-  it('should render title', () => {
+  it('should render the editor wrapper', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, wyswyg_edit');
+    expect(compiled.querySelector('vovo-editor')).toBeTruthy();
   });
 });
